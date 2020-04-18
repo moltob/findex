@@ -38,6 +38,16 @@ def compute_hash(filepath: pathlib.Path) -> str:
 
 
 if __name__ == '__main__':
-    for fpath, fhash in index_directory(pathlib.Path()):
+    result = None
+
+    def timed_main():
+        global result
+        result = list(index_directory(pathlib.Path()))
+
+    import timeit
+    exec_time = timeit.timeit(timed_main, number=5)
+
+    for fpath, fhash in result:
         print(fhash, fpath)
-        pass
+
+    print(f'Execution time: {exec_time:.3f} s.')

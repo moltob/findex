@@ -12,6 +12,9 @@ import typing as t
 
 _logger = logging.getLogger(__name__)
 
+FILEHASH_EMPTY = '0000000000000000000000000000000000000000'
+"""Fake hash for empty files."""
+
 
 def index_directory(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path]]:
     """Recurse given directory and for each non-empty file return content hash and path."""
@@ -21,10 +24,9 @@ def index_directory(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path]]
             filepath = root / filename
 
             if filepath.stat().st_size == 0:
-                _logger.warning(f'Empty file not indexed: {filepath}')
-                continue
-
-            filehash = compute_hash(filepath)
+                filehash = FILEHASH_EMPTY
+            else:
+                filehash = compute_hash(filepath)
             yield filepath, filehash
 
 
@@ -37,5 +39,5 @@ def compute_hash(filepath: pathlib.Path) -> str:
 
 if __name__ == '__main__':
     for fpath, fhash in index_directory(pathlib.Path()):
-        print(fpath, fhash)
+        print(fhash, fpath)
         pass

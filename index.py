@@ -16,18 +16,19 @@ FILEHASH_EMPTY = '0000000000000000000000000000000000000000'
 """Fake hash for empty files."""
 
 
-def index_directory(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path]]:
+def index_directory(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
     """Recurse given directory and for each non-empty file return content hash and path."""
     for dirpath, dirnames, filenames in os.walk(top):
         root = pathlib.Path(dirpath).absolute()
         for filename in filenames:
             filepath = root / filename
+            filesize = filepath.stat().st_size
 
-            if filepath.stat().st_size == 0:
+            if filesize == 0:
                 filehash = FILEHASH_EMPTY
             else:
                 filehash = compute_hash(filepath)
-            yield filepath, filehash
+            yield filepath, filehash, filesize
 
 
 def compute_hash(filepath: pathlib.Path) -> str:
@@ -42,12 +43,17 @@ if __name__ == '__main__':
 
     def timed_main():
         global result
-        result = list(index_directory(pathlib.Path()))
+        result = list(index_directory(pathlib.Path(r'Q:\Britta Pagel Fotografie')))
 
     import timeit
-    exec_time = timeit.timeit(timed_main, number=5)
+    exec_time = timeit.timeit(timed_main, number=1)
 
-    for fpath, fhash in result:
+    numbytes = 0
+    for fpath, fhash, fsize in result:
         print(fhash, fpath)
+        numbytes += fsize
 
-    print(f'Execution time: {exec_time:.3f} s.')
+    kbits = 8 / 1024 * numbytes / exec_time
+    print(f'Execution time: {exec_time:.3f} s')
+    print(f'Files:          {len(result)} ({numbytes:,d} bytes)')
+    print(f'Bandwith:       {kbits:.2f} kbit/s')

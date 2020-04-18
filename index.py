@@ -49,24 +49,32 @@ class Index:
         self.connection = None
 
     @property
-    def connected(self):
+    def exists(self):
+        return self.path and self.path.exists()
+
+    @property
+    def opened(self):
         return bool(self.connection)
 
     def create(self):
         """Create and open sqlite DB with index schema."""
-        if self.connected:
-            _logger.error('Cannot create database if already connected.')
+        if self.exists:
+            _logger.error(f'Database file at {self.path} already exists, delete first.')
             return
 
-        if self.path.exists():
-            _logger.error(f'Database file at {self.path} already exists, delete first.')
-
         _logger.info(f'Creating file index database {self.path}.')
-        self.connection = sqlite3.connect(self.path)
+        self.open()
         self.connection.executescript(pathlib.Path(SCHEMA_FILE).read_text())
 
+    def open(self):
+        if self.opened:
+            _logger.error('Database already open.')
+            return
+
+        self.connection = sqlite3.connect(self.path)
+
     def close(self):
-        if self.connected:
+        if self.opened:
             self.connection.close()
             self.connection = None
 

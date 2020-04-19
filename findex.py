@@ -9,6 +9,8 @@ import sqlite3
 import typing as t
 
 # fake hash values to identify non-hashable files:
+import tqdm
+
 FILEHASH_EMPTY = 'empty'.ljust(40, '.')
 FILEHASH_INACCESSIBLE = 'inaccessible'.ljust(40, '.')
 
@@ -66,12 +68,25 @@ class Index:
             return
 
         _logger.info(f'Adding {path} to index.')
+        count = count_files(path)
+
+        _logger.info(f'Found {count} files to be added to index.')
+
+        for filedesc in tqdm.tqdm(walk(path), total=count, desc='Read', unit='files'):
+            self.add_file(filedesc)
+
+    def add_file(self, filedesc: FileDesc):
+        # TODO talk to database
+        pass
 
 
 def count_files(top: pathlib.Path) -> int:
+    _logger.debug(f'Counting files in {top}.')
+
     count = 0
     for dirpath, dirnames, filenames in os.walk(top):
         count += len(filenames)
+
     return count
 
 
@@ -85,7 +100,7 @@ def count_bytes(top: pathlib.Path) -> int:
 
 def walk(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
     """Recurse given directory and for each non-empty file return content hash and path."""
-    _logger.info(f'Traversing directory {top} recursively.')
+    _logger.debug(f'Traversing directory {top} recursively.')
 
     for dirpath, dirnames, filenames in os.walk(top):
         root = (top / dirpath).absolute()

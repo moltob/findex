@@ -1,7 +1,10 @@
 import logging
 import pathlib
 
-from findex import walk, count_files, count_bytes
+from findex import walk, count_files, count_bytes, Index
+
+TEST_DIR = pathlib.Path(r'c:\Windows\Microsoft.NET')
+TEST_DB = pathlib.Path('test.db')
 
 
 def main():
@@ -9,25 +12,13 @@ def main():
     colorama.init()
 
     import daiquiri
-    daiquiri.setup(level=logging.DEBUG)
+    daiquiri.setup(level=logging.INFO)
 
-    # findex = Index(pathlib.Path('test.db'))
-    # findex.create()
+    TEST_DB.unlink(missing_ok=True)
 
-    TEST_DIR = pathlib.Path(r'Q:\Britta Pagel Fotografie')
-
-    def timed_main():
-        list(walk(TEST_DIR))
-
-    import timeit
-
-    files_time = timeit.timeit(lambda: count_files(TEST_DIR), number=1)
-    bytes_time = timeit.timeit(lambda: count_bytes(TEST_DIR), number=1)
-    exec_time = timeit.timeit(timed_main, number=1)
-
-    print(f'Count files:    {files_time:.3f} s')
-    print(f'Count bytes:    {bytes_time:.3f} s')
-    print(f'Execution time: {exec_time:.3f} s')
+    findex = Index(pathlib.Path(TEST_DB))
+    findex.create()
+    findex.add_directory(TEST_DIR)
 
 
 if __name__ == '__main__':

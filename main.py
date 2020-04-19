@@ -14,7 +14,7 @@ def main():
     import daiquiri
     daiquiri.setup(level=logging.INFO)
 
-    TEST_DB.unlink(missing_ok=True)
+    # TEST_DB.unlink(missing_ok=True)
 
     findex = Index(pathlib.Path(TEST_DB))
     findex.create()

@@ -27,6 +27,10 @@ DATABASE_TRANSACTION_SIZE = 100000
 _logger = logging.getLogger(__name__)
 
 
+class IndexExistsError(Exception):
+    """The index exists and cannot be recreated."""
+
+
 class Index:
     """Index of file path by content, based on sqlite."""
 
@@ -45,8 +49,7 @@ class Index:
     def create(self):
         """Create and open sqlite DB with index schema."""
         if self.exists:
-            _logger.error(f'Database file at {self.path} already exists, delete first.')
-            return
+            raise IndexExistsError(self.path)
 
         _logger.info(f'Creating file index database {self.path}.')
         self.open()

@@ -88,7 +88,7 @@ def index_directory(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, 
     _logger.info(f'Traversing directory {top} recursively.')
 
     for dirpath, dirnames, filenames in os.walk(top):
-        root = pathlib.Path(dirpath).absolute()
+        root = (top / dirpath).absolute()
         for filename in filenames:
             filepath = root / filename
             filesize = filepath.stat().st_size

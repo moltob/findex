@@ -13,8 +13,7 @@ import typing as t
 import tqdm
 
 FILEHASH_EMPTY = '_empty'
-FILEHASH_INACCESSIBLE_FILE = '_inaccessible_file'
-FILEHASH_INACCESSIBLE_DIR = '_inacessible_dir'
+FILEHASH_INACCESSIBLE = '_inaccessible_file'
 
 FileDesc = collections.namedtuple('FileDesc', 'path size fhash')
 """Descriptor for a file in index."""
@@ -108,8 +107,11 @@ class Index:
 def count_files(top: pathlib.Path) -> int:
     _logger.debug(f'Counting files in {top}.')
 
+    def onerror(error: OSError):
+        _logger.error(error)
+
     count = 0
-    for dirpath, dirnames, filenames in os.walk(top):
+    for dirpath, dirnames, filenames in os.walk(top, onerror=onerror):
         count += len(filenames)
 
     return count
@@ -134,7 +136,6 @@ def walk(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
             # check accessibility of folder to make user aware:
             dirpath = root / dirname
             if not os.access(dirpath, os.X_OK):
-                _logger.warning(f'Directory inaccessible: {dirpath}')
                 yield FileDesc(path=str(dirpath), fhash=FILEHASH_INACCESSIBLE_DIR, size=0)
 
         for filename in filenames:
@@ -148,7 +149,7 @@ def walk(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
                     filehash = compute_filehash(filepath)
                 except PermissionError:
                     _logger.warning(f'File inaccessible: {filepath}.')
-                    filehash = FILEHASH_INACCESSIBLE_FILE
+                    filehash = FILEHASH_INACCESSIBLE
 
             _logger.debug(f'{filehash} {filepath}')
             yield FileDesc(path=str(filepath), fhash=filehash, size=filesize)

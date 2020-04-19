@@ -1,7 +1,7 @@
 import logging
 import pathlib
 
-from findex import walk, count_files, count_bytes, Index
+from findex import Index
 
 TEST_DIR = pathlib.Path(r'..\testfolder')
 TEST_DB = pathlib.Path('test.db')
@@ -14,7 +14,7 @@ def main():
     import daiquiri
     daiquiri.setup(level=logging.INFO)
 
-    # TEST_DB.unlink(missing_ok=True)
+    TEST_DB.unlink(missing_ok=True)
 
     findex = Index(pathlib.Path(TEST_DB))
     findex.create()

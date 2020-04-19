@@ -1,0 +1,4 @@
+colorama==0.4.3
+daiquiri==2.1.1
+python-json-logger==0.1.11
+tqdm==4.45.0

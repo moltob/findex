@@ -1,7 +1,7 @@
 import logging
 import pathlib
 
-from findex import index_directory, count_files, count_bytes
+from findex import walk, count_files, count_bytes
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
     TEST_DIR = pathlib.Path(r'Q:\Britta Pagel Fotografie')
 
     def timed_main():
-        list(index_directory(TEST_DIR))
+        list(walk(TEST_DIR))
 
     import timeit
 

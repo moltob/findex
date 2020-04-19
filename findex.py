@@ -83,7 +83,7 @@ def count_bytes(top: pathlib.Path) -> int:
     return count
 
 
-def index_directory(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
+def walk(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
     """Recurse given directory and for each non-empty file return content hash and path."""
     _logger.info(f'Traversing directory {top} recursively.')
 

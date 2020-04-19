@@ -5,8 +5,7 @@ import os
 import pathlib
 import typing as t
 
-FILEHASH_EMPTY = '0000000000000000000000000000000000000000'
-"""Fake hash for empty files."""
+from findex import FILEHASH_EMPTY, FileDesc
 
 
 def count_files(top: pathlib.Path) -> int:
@@ -28,7 +27,7 @@ def index_directory(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, 
                 filehash = FILEHASH_EMPTY
             else:
                 filehash = compute_filehash(filepath)
-            yield filepath, filehash, filesize
+            yield FileDesc(path=filepath, fhash=filehash, size=filesize)
 
 
 def compute_filehash(filepath: pathlib.Path) -> str:

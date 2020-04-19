@@ -21,9 +21,9 @@ def main():
     exec_time = timeit.timeit(timed_main, number=1)
 
     numbytes = 0
-    for fpath, fhash, fsize in result:
-        print(fhash, fpath)
-        numbytes += fsize
+    for fdesc in result:
+        print(fdesc.fhash, fdesc.path)
+        numbytes += fdesc.size
 
     kbits = 8 / 1024 * numbytes / exec_time
     print(f'Count time:     {count_time:.3f} s')

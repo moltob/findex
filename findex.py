@@ -1,13 +1,18 @@
 """Index of files in a directory structure."""
+import collections
 import logging
 import pathlib
 import sqlite3
 
-from fhash import count_files, index_directory
+FILEHASH_EMPTY = '0000000000000000000000000000000000000000'
+"""Fake hash for empty files."""
 
-_logger = logging.getLogger(__name__)
+FileDesc = collections.namedtuple('FileDesc', 'path size fhash')
+"""Descriptor for a file in index."""
 
 SCHEMA_FILE = 'findex-schema.sql'
+
+_logger = logging.getLogger(__name__)
 
 
 class Index:

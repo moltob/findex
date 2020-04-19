@@ -111,7 +111,11 @@ def walk(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
             if filesize == 0:
                 filehash = FILEHASH_EMPTY
             else:
-                filehash = compute_filehash(filepath)
+                try:
+                    filehash = compute_filehash(filepath)
+                except PermissionError as ex:
+                    _logger.warning(f'File inaccessible: {filepath}.')
+                    filehash = FILEHASH_INACCESSIBLE
 
             _logger.debug(f'{filehash} {filepath}')
             yield FileDesc(path=filepath, fhash=filehash, size=filesize)

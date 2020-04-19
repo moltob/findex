@@ -3,7 +3,7 @@ import pathlib
 
 from findex import walk, count_files, count_bytes, Index
 
-TEST_DIR = pathlib.Path(r'c:\ProgramData')
+TEST_DIR = pathlib.Path(r'..\testfolder')
 TEST_DB = pathlib.Path('test.db')
 
 

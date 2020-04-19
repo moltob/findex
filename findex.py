@@ -124,7 +124,7 @@ def walk(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
     _logger.debug(f'Traversing directory {top} recursively.')
 
     for dirpath, dirnames, filenames in os.walk(top):
-        root = (top / dirpath).absolute()
+        root = pathlib.Path(dirpath).resolve()
         for filename in filenames:
             filepath = root / filename
             filesize = filepath.stat().st_size

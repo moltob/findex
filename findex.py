@@ -1,5 +1,6 @@
 """Index of files in a directory structure."""
 import collections
+import contextlib
 import hashlib
 import logging
 import mmap
@@ -18,6 +19,9 @@ FileDesc = collections.namedtuple('FileDesc', 'path size fhash')
 """Descriptor for a file in index."""
 
 SCHEMA_FILE = 'findex-schema.sql'
+
+DATABASE_TRANSACTION_SIZE = 100000
+"""Maximum number of data sets before writing to database."""
 
 _logger = logging.getLogger(__name__)
 
@@ -46,38 +50,55 @@ class Index:
         _logger.info(f'Creating file index database {self.path}.')
         self.open()
         self.connection.executescript(pathlib.Path(SCHEMA_FILE).read_text())
+        self.close()
 
     def open(self):
         if self.opened:
             _logger.warning('Database already open.')
             return
 
-        _logger.debug(f'Opening database {self.path}.')
+        _logger.info(f'Opening database {self.path}.')
         self.connection = sqlite3.connect(self.path)
+
+        return self
 
     def close(self):
         if self.opened:
+            self._flush()
             self.connection.close()
             self.connection = None
-            _logger.debug('Database closed.')
+            _logger.info('Database closed.')
 
     def add_directory(self, path: pathlib.Path):
         """Adds the files in directory to index."""
-        if not self.opened:
-            _logger.error('Index is not opened, cannot add data.')
-            return
-
         _logger.info(f'Adding {path} to index.')
         count = count_files(path)
 
         _logger.info(f'Found {count} files to be added to index.')
 
-        for filedesc in tqdm.tqdm(walk(path), total=count, desc='Read', unit='files'):
-            self.add_file(filedesc)
+        with contextlib.closing(self.open()):
+            files_before_flush = DATABASE_TRANSACTION_SIZE
+            for filedesc in tqdm.tqdm(walk(path), total=count, desc='Read', unit='files'):
+                self._add_file(filedesc)
+                files_before_flush -= 1
 
-    def add_file(self, filedesc: FileDesc):
-        # TODO talk to database
-        pass
+                if files_before_flush <= 0:
+                    self._flush()
+                    files_before_flush = DATABASE_TRANSACTION_SIZE
+
+    def _add_file(self, filedesc: FileDesc):
+        try:
+            self.connection.execute(
+                f'INSERT INTO file (path,size,hash) VALUES (?,?,?);',
+                filedesc,
+            )
+        except sqlite3.OperationalError as ex:
+            _logger.error(f'Cannot add file to database: {filedesc}')
+            raise
+
+    def _flush(self):
+        _logger.debug('Flushing transaction.')
+        self.connection.commit()
 
 
 def count_files(top: pathlib.Path) -> int:
@@ -113,12 +134,12 @@ def walk(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
             else:
                 try:
                     filehash = compute_filehash(filepath)
-                except PermissionError as ex:
+                except PermissionError:
                     _logger.warning(f'File inaccessible: {filepath}.')
                     filehash = FILEHASH_INACCESSIBLE
 
             _logger.debug(f'{filehash} {filepath}')
-            yield FileDesc(path=filepath, fhash=filehash, size=filesize)
+            yield FileDesc(path=str(filepath), fhash=filehash, size=filesize)
 
 
 def compute_filehash(filepath: pathlib.Path) -> str:

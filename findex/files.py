@@ -2,7 +2,6 @@
 import collections
 import contextlib
 import hashlib
-import pkg_resources
 import logging
 import mmap
 import os
@@ -10,6 +9,7 @@ import pathlib
 import sqlite3
 import typing as t
 
+import pkg_resources
 import tqdm
 
 # fake hash values to identify non-hashable files:

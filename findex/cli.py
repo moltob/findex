@@ -2,9 +2,9 @@ import logging
 import os
 import pathlib
 
-from findex import Index
+from findex.files import Index
 
-INDEX_DIR = pathlib.Path(r'..\testfolder')
+INDEX_DIR = pathlib.Path(r'.')
 INDEX_DB = pathlib.Path('test.db')
 
 

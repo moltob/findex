@@ -2,6 +2,7 @@
 import collections
 import contextlib
 import hashlib
+import pkg_resources
 import logging
 import mmap
 import os
@@ -9,9 +10,9 @@ import pathlib
 import sqlite3
 import typing as t
 
-# fake hash values to identify non-hashable files:
 import tqdm
 
+# fake hash values to identify non-hashable files:
 FILEHASH_EMPTY = '_empty'
 FILEHASH_INACCESSIBLE = '_inaccessible_file'
 
@@ -52,7 +53,7 @@ class Index:
 
         _logger.info(f'Creating file index database {self.path}.')
         self.open()
-        self.connection.executescript(pathlib.Path(SCHEMA_FILE).read_text())
+        self.connection.executescript(pkg_resources.resource_string(__package__, SCHEMA_FILE).decode())
         self.close()
 
     def open(self):

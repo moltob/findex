@@ -13,4 +13,5 @@ setup(
         'daiquiri',
         'tqdm',
     ],
+    include_package_data=True,
 )

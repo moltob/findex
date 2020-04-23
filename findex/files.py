@@ -85,7 +85,7 @@ class Index:
         def _on_error(error: OSError):
             _logger.warning(error)
             errors.append(FileDesc(
-                path=error.filename,
+                path=str(pathlib.Path(error.filename).resolve()),
                 size=0,
                 fhash=FILEHASH_WALK_ERROR.format(message=error.strerror),
             ))

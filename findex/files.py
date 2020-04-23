@@ -14,7 +14,8 @@ import tqdm
 
 # fake hash values to identify non-hashable files:
 FILEHASH_EMPTY = '_empty'
-FILEHASH_INACCESSIBLE = '_inaccessible_file'
+FILEHASH_INACCESSIBLE_FILE = '_inaccessible_file'
+FILEHASH_WALK_ERROR = '_error: {message}'
 
 FileDesc = collections.namedtuple('FileDesc', 'path size fhash')
 """Descriptor for a file in index."""
@@ -53,7 +54,9 @@ class Index:
 
         _logger.info(f'Creating file index database {self.path}.')
         self.open()
-        self.connection.executescript(pkg_resources.resource_string(__package__, SCHEMA_FILE).decode())
+        self.connection.executescript(
+            pkg_resources.resource_string(__package__, SCHEMA_FILE).decode()
+        )
         self.close()
 
     def open(self):
@@ -75,12 +78,26 @@ class Index:
 
     def add_directory(self, path: pathlib.Path):
         """Adds the files in directory to index."""
-        _logger.info(f'Adding {path} to index.')
-        count = count_files(path)
 
-        _logger.info(f'Found {count} files to be added to index.')
+        _logger.info(f'Adding {path} to index.')
+        errors = []
+
+        def _on_error(error: OSError):
+            _logger.warning(error)
+            errors.append(FileDesc(
+                path=error.filename,
+                size=0,
+                fhash=FILEHASH_WALK_ERROR.format(message=error.strerror),
+            ))
+
+        count = count_files(path, _on_error)
 
         with contextlib.closing(self.open()):
+            _logger.debug(f'Writing {len(errors)} walk errors to database.')
+            for errordesc in errors:
+                self._add_file(errordesc)
+
+            _logger.info(f'Found {count} files to be added to index.')
             files_before_flush = DATABASE_TRANSACTION_SIZE
             for filedesc in tqdm.tqdm(walk(path), total=count, desc='Read', unit='files'):
                 self._add_file(filedesc)
@@ -105,11 +122,8 @@ class Index:
         self.connection.commit()
 
 
-def count_files(top: pathlib.Path) -> int:
+def count_files(top: pathlib.Path, onerror=None) -> int:
     _logger.debug(f'Counting files in {top}.')
-
-    def onerror(error: OSError):
-        _logger.error(error)
 
     count = 0
     for dirpath, dirnames, filenames in os.walk(top, onerror=onerror):
@@ -136,8 +150,6 @@ def walk(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
         for dirname in dirnames:
             # check accessibility of folder to make user aware:
             dirpath = root / dirname
-            if not os.access(dirpath, os.X_OK):
-                yield FileDesc(path=str(dirpath), fhash=FILEHASH_INACCESSIBLE_DIR, size=0)
 
         for filename in filenames:
             filepath = root / filename
@@ -150,7 +162,7 @@ def walk(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
                     filehash = compute_filehash(filepath)
                 except PermissionError:
                     _logger.warning(f'File inaccessible: {filepath}.')
-                    filehash = FILEHASH_INACCESSIBLE
+                    filehash = FILEHASH_INACCESSIBLE_FILE
 
             _logger.debug(f'{filehash} {filepath}')
             yield FileDesc(path=str(filepath), fhash=filehash, size=filesize)

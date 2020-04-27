@@ -1,6 +1,7 @@
 """Index of files in a directory structure."""
 import collections
 import contextlib
+import datetime
 import hashlib
 import logging
 import mmap
@@ -17,7 +18,7 @@ FILEHASH_EMPTY = '_empty'
 FILEHASH_INACCESSIBLE_FILE = '_inaccessible_file'
 FILEHASH_WALK_ERROR = '_error: {message}'
 
-FileDesc = collections.namedtuple('FileDesc', 'path size fhash')
+FileDesc = collections.namedtuple('FileDesc', 'path size fhash created modified')
 """Descriptor for a file in index."""
 
 SCHEMA_FILE = 'findex-schema.sql'
@@ -88,6 +89,8 @@ class Index:
                 path=str(pathlib.Path(error.filename).resolve()),
                 size=0,
                 fhash=FILEHASH_WALK_ERROR.format(message=error.strerror),
+                created=None,
+                modified=None,
             ))
 
         count = count_files(path, _on_error)
@@ -110,7 +113,8 @@ class Index:
     def _add_file(self, filedesc: FileDesc):
         try:
             self.connection.execute(
-                f'INSERT INTO file (path,size,hash) VALUES (?,?,?);',
+                'INSERT INTO file (path,size,hash,created,modified)'
+                '  VALUES (?,?,?,datetime(?),datetime(?));',
                 filedesc,
             )
         except sqlite3.OperationalError as ex:
@@ -153,7 +157,8 @@ def walk(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
 
         for filename in filenames:
             filepath = root / filename
-            filesize = filepath.stat().st_size
+            stat = filepath.stat()
+            filesize = stat.st_size
 
             if filesize == 0:
                 filehash = FILEHASH_EMPTY
@@ -165,7 +170,13 @@ def walk(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
                     filehash = FILEHASH_INACCESSIBLE_FILE
 
             _logger.debug(f'{filehash} {filepath}')
-            yield FileDesc(path=str(filepath), fhash=filehash, size=filesize)
+            yield FileDesc(
+                path=str(filepath),
+                fhash=filehash,
+                size=filesize,
+                created=datetime.datetime.fromtimestamp(stat.st_ctime),
+                modified=datetime.datetime.fromtimestamp(stat.st_mtime),
+            )
 
 
 def compute_filehash(filepath: pathlib.Path) -> str:

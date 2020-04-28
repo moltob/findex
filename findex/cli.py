@@ -3,7 +3,7 @@ import pathlib
 
 import click
 
-from findex.files import Index, IndexExistsError
+from findex.index import Index, IndexExistsError
 
 
 @click.group()

@@ -51,5 +51,10 @@ def index(directory, db, overwrite):
         raise
 
 
+@cli.command()
+def compare():
+    """Compare files in two directory indexes."""
+
+
 if __name__ == "__main__":
     cli()

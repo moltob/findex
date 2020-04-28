@@ -10,6 +10,7 @@ import pathlib
 import sqlite3
 import typing as t
 
+import click
 import pkg_resources
 import tqdm
 
@@ -88,7 +89,7 @@ class Index:
             _logger.warning(error)
             errors.append(
                 FileDesc(
-                    path=str(pathlib.Path(error.filename).resolve()),
+                    path=error.filename,
                     size=0,
                     fhash=FILEHASH_WALK_ERROR.format(message=error.strerror),
                     created=None,
@@ -96,6 +97,7 @@ class Index:
                 )
             )
 
+        click.echo(f"Counting files in {path}...")
         count = count_files(path, _on_error)
 
         with contextlib.closing(self.open()):
@@ -154,7 +156,7 @@ def walk(top: pathlib.Path) -> t.Iterable[t.Tuple[str, pathlib.Path, int]]:
     _logger.debug(f"Traversing directory {top} recursively.")
 
     for dirpath, dirnames, filenames in os.walk(top):
-        root = pathlib.Path(dirpath).resolve()
+        root = pathlib.Path(dirpath)
 
         for dirname in dirnames:
             # check accessibility of folder to make user aware:

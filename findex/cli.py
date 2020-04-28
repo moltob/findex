@@ -10,7 +10,7 @@ from findex.files import Index, IndexExistsError
 def cli():
     import daiquiri
 
-    daiquiri.setup(level=logging.INFO)
+    daiquiri.setup(level=logging.WARNING)
 
 
 @cli.command()
@@ -29,8 +29,8 @@ def index(directory, db, overwrite):
     DIRECTORY is the path to the root of the file tree being indexed.
     """
 
-    index_path = pathlib.Path(db)
-    directory_path = pathlib.Path(directory)
+    index_path = pathlib.Path(db).resolve()
+    directory_path = pathlib.Path(directory).resolve()
     if overwrite:
         index_path.unlink(missing_ok=True)
 
@@ -48,6 +48,7 @@ def index(directory, db, overwrite):
         click.secho(
             f"An unexpected error occured: {ex}.", fg="bright_red",
         )
+        raise
 
 
 if __name__ == "__main__":

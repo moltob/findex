@@ -4,7 +4,7 @@ import pathlib
 import click
 
 from findex.db import DbExistsError
-from findex.index import Index
+from findex.index import Index, Comparison
 
 
 @click.group()
@@ -15,7 +15,7 @@ def cli():
 
 
 @cli.command()
-@click.argument("directory", type=click.Path())
+@click.argument("directory", type=click.Path(exists=True))
 @click.option(
     "--db", type=click.Path(), default="findex.db", help="Path to generated index file."
 )
@@ -49,8 +49,8 @@ def index(directory, db, overwrite):
 
 
 @cli.command()
-@click.argument("index1", type=click.Path())
-@click.argument("index2", type=click.Path())
+@click.argument("index1", type=click.Path(exists=True))
+@click.argument("index2", type=click.Path(exists=True))
 @click.option(
     "--db",
     type=click.Path(),
@@ -70,6 +70,18 @@ def compare(index1, index2, db, overwrite):
     comparison_path = pathlib.Path(db).resolve()
     if overwrite:
         comparison_path.unlink(missing_ok=True)
+
+    try:
+        Comparison(comparison_path).create(index1_path, index2_path)
+    except DbExistsError:
+        click.secho(
+            f"The comparison {db!r} already exists, please choose another file or use the "
+            f"--overwrite option.",
+            fg="bright_red",
+        )
+    except Exception as ex:
+        click.secho(f"An unexpected error occured: {ex}.", fg="bright_red")
+        raise
 
 
 if __name__ == "__main__":

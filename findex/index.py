@@ -65,9 +65,7 @@ class Index(Storage):
 class Comparison(Storage):
     """Comparison of two index databases."""
 
-    def create(self):
-        """Create and open sqlite DB with index schema."""
-        self.create_db()
+    def create(self, index1: pathlib.Path, index2: pathlib.Path):
+        """Create comparison of two file index files."""
 
-    def compare(self, index1: pathlib.Path, index2: pathlib.Path):
-        pass
+        self.create_db()

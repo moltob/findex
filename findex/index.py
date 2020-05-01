@@ -100,14 +100,10 @@ class Comparison(Storage):
 
     def _add_file(self, filedesc: FileDesc, index_id: int):
 
-        filefrom = FileFrom(
-            fhash=filedesc.fhash,
-            origin=index_id,
-            path=filedesc.path,
-            size=filedesc.size,
-            created=filedesc.created,
-            modified=filedesc.modified,
-        )
+        # extend fie descriptor with origin:
+        data = filedesc._asdict()
+        data['origin'] = index_id
+        filefrom = FileFrom(**data)
 
         try:
             self.connection.execute(

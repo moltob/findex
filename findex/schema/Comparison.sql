@@ -3,8 +3,8 @@ CREATE TABLE file (
     origin INTEGER NOT NULL,  -- ID of index where file comes from
     path TEXT NOT NULL,
     size INTEGER NOT NULL,
-    created TEXT NULL,
-    modified TEXT NULL
+    created TIMESTAMP NULL,
+    modified TIMESTAMP NULL
 );
 
 CREATE INDEX idx_hash ON file (hash);

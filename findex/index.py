@@ -14,6 +14,8 @@ import click
 import pkg_resources
 import tqdm
 
+from findex.util import Storage
+
 # fake hash values to identify non-hashable files:
 FILEHASH_EMPTY = "_empty"
 FILEHASH_INACCESSIBLE_FILE = "_inaccessible_file"
@@ -22,67 +24,17 @@ FILEHASH_WALK_ERROR = "_error: {message}"
 FileDesc = collections.namedtuple("FileDesc", "path size fhash created modified")
 """Descriptor for a file in index."""
 
-SCHEMA_FILE = "findex-schema.sql"
-
-DATABASE_TRANSACTION_SIZE = 100000
-"""Maximum number of data sets before writing to database."""
-
 _logger = logging.getLogger(__name__)
 
 
-class IndexExistsError(Exception):
-    """The index exists and cannot be recreated."""
-
-
-class Index:
+class Index(Storage):
     """Index of file path by content, based on sqlite."""
 
-    def __init__(self, path: pathlib.Path):
-        self.path = path
-        self.connection = None
+    def create(self, path: pathlib.Path):
+        """Create index of given directory."""
 
-    @property
-    def exists(self):
-        return self.path and self.path.exists()
-
-    @property
-    def opened(self):
-        return bool(self.connection)
-
-    def create(self):
-        """Create and open sqlite DB with index schema."""
-        if self.exists:
-            _logger.error(f"Database already exists at {self.path}.")
-            raise IndexExistsError(self.path)
-
-        _logger.info(f"Creating file index database {self.path}.")
-        self.open()
-        self.connection.executescript(
-            pkg_resources.resource_string(__package__, SCHEMA_FILE).decode()
-        )
-        self.close()
-
-    def open(self):
-        if self.opened:
-            _logger.warning("Database already open.")
-            return
-
-        _logger.info(f"Opening database {self.path}.")
-        self.connection = sqlite3.connect(self.path)
-
-        return self
-
-    def close(self):
-        if self.opened:
-            self._flush()
-            self.connection.close()
-            self.connection = None
-            _logger.info("Database closed.")
-
-    def add_directory(self, path: pathlib.Path):
-        """Adds the files in directory to index."""
-
-        _logger.info(f"Adding {path} to index.")
+        _logger.info(f"Creating index of {path}.")
+        self.create_db('findex-schema.sql')
         errors = []
 
         def _on_error(error: OSError):
@@ -106,16 +58,11 @@ class Index:
                 self._add_file(errordesc)
 
             _logger.info(f"Found {count} files to be added to index.")
-            files_before_flush = DATABASE_TRANSACTION_SIZE
             for filedesc in tqdm.tqdm(
-                walk(path), total=count, desc="Read", unit="files"
+                    walk(path), total=count, desc="Read", unit="files"
             ):
                 self._add_file(filedesc)
-                files_before_flush -= 1
-
-                if files_before_flush <= 0:
-                    self._flush()
-                    files_before_flush = DATABASE_TRANSACTION_SIZE
+                self._on_update()
 
     def _add_file(self, filedesc: FileDesc):
         try:
@@ -127,10 +74,6 @@ class Index:
         except sqlite3.OperationalError as ex:
             _logger.error(f"Cannot add file to database: {filedesc}")
             raise
-
-    def _flush(self):
-        _logger.debug("Flushing transaction.")
-        self.connection.commit()
 
 
 def count_files(top: pathlib.Path, onerror=None) -> int:

@@ -7,7 +7,7 @@ import sqlite3
 import click
 import tqdm
 
-from findex.db import Storage
+from findex.db import Storage, DbClosedError
 from findex.fs import FileDesc, FILEHASH_WALK_ERROR, count_files, walk
 
 _logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class Index(Storage):
 
             _logger.info(f"Found {count} files to be added to index.")
             for filedesc in tqdm.tqdm(
-                walk(path), total=count, desc="Read", unit="files"
+                    walk(path), total=count, desc="Read", unit="files"
             ):
                 self._add_file(filedesc)
                 self._on_update()
@@ -61,11 +61,33 @@ class Index(Storage):
             _logger.error(f"Cannot add file to database: {filedesc}")
             raise
 
+    def __iter__(self):
+        if not self.opened:
+            _logger.error("Database closed, cannot iterate.")
+            raise DbClosedError()
+
+        with contextlib.closing(self.connection.cursor()) as cursor:
+            for row in cursor.execute("SELECT path,size,hash,datetime(created),modified from file"):
+                yield FileDesc._make(row)
+
 
 class Comparison(Storage):
     """Comparison of two index databases."""
 
-    def create(self, index1: pathlib.Path, index2: pathlib.Path):
+    def create(self, index1_path: pathlib.Path, index2_path: pathlib.Path):
         """Create comparison of two file index files."""
 
+        _logger.info(f"Creating comparison of {index1_path} and {index2_path}.")
+
         self.create_db()
+
+        with contextlib.closing(self.open()):
+            self._add_index(index1_path, 1)
+            self._add_index(index2_path, 2)
+
+    def _add_index(self, index_path: pathlib.Path, index_id):
+        _logger.info(f"Adding data from {index_path}.")
+        index = Index(index_path).open()
+
+        for file in tqdm.tqdm(index, unit="files"):
+            print(file)

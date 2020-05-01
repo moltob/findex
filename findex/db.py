@@ -1,4 +1,5 @@
 """Index utilities."""
+import contextlib
 import logging
 import pathlib
 import sqlite3
@@ -11,6 +12,10 @@ _logger = logging.getLogger(__name__)
 
 class DbExistsError(Exception):
     """The index exists and cannot be recreated."""
+
+
+class DbClosedError(Exception):
+    """The index is closed and cannot be processed."""
 
 
 class Storage:
@@ -28,6 +33,13 @@ class Storage:
     @property
     def opened(self):
         return bool(self.connection)
+
+    def __len__(self):
+        if not self.opened:
+            _logger.error("Database closed, cannot count.")
+            raise DbClosedError()
+
+        return self.connection.execute("SELECT COUNT(*) from file").fetchone()[0]
 
     def create_db(self):
         """Create and open sqlite DB with index schema."""

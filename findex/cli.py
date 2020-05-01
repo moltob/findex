@@ -11,7 +11,7 @@ from findex.index import Index, Comparison
 def cli():
     import daiquiri
 
-    daiquiri.setup(level=logging.WARNING)
+    daiquiri.setup(level=logging.DEBUG)
 
 
 @cli.command()

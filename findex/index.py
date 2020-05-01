@@ -49,7 +49,7 @@ class Index(Storage):
 
             _logger.info(f"Found {count} files to be added to index.")
             for filedesc in tqdm.tqdm(
-                    walk(path), total=count, desc="Read", unit="files"
+                walk(path), total=count, desc="Read", unit="files"
             ):
                 self._add_file(filedesc)
                 self._on_update()
@@ -71,8 +71,15 @@ class Index(Storage):
             raise DbClosedError()
 
         with contextlib.closing(self.connection.cursor()) as cursor:
-            for row in cursor.execute("SELECT path,size,hash,created,modified from file"):
+            for row in cursor.execute(
+                "SELECT path,size,hash,created,modified from file"
+            ):
                 yield FileDesc._make(row)
+
+    @property
+    def duplicates(self):
+        """Return list of duplicate files."""
+        raise NotImplementedError()
 
 
 class Comparison(Storage):
@@ -102,7 +109,7 @@ class Comparison(Storage):
 
         # extend fie descriptor with origin:
         data = filedesc._asdict()
-        data['origin'] = index_id
+        data["origin"] = index_id
         filefrom = FileFrom(**data)
 
         try:
@@ -114,3 +121,22 @@ class Comparison(Storage):
         except sqlite3.OperationalError:
             _logger.error(f"Cannot add file to database: {filedesc}")
             raise
+
+    @property
+    def missing_files(self):
+        """Return files only in index 1, but not in 2."""
+        raise NotImplementedError()
+
+    @property
+    def new_files(self):
+        """Return files only in index 2, but not in 1."""
+        raise NotImplementedError()
+
+    @property
+    def files_map(self):
+        """Return list of pairs of files in index 1 and their corresponding files in index 2.
+
+        In case of duplicates in an index, there is possibly more than one file in each of the
+        elements.
+        """
+        raise NotImplementedError()

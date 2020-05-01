@@ -1,4 +1,5 @@
 """Index of files in a directory structure."""
+import collections
 import contextlib
 import logging
 import pathlib
@@ -11,6 +12,9 @@ from findex.db import Storage, DbClosedError
 from findex.fs import FileDesc, FILEHASH_WALK_ERROR, count_files, walk
 
 _logger = logging.getLogger(__name__)
+
+FileFrom = collections.namedtuple("FileFrom", "fhash origin path size created modified")
+"""Descriptor for a file with origin as used in comparison."""
 
 
 class Index(Storage):
@@ -82,12 +86,35 @@ class Comparison(Storage):
         self.create_db()
 
         with contextlib.closing(self.open()):
+            click.echo(f"\nAdding data from {index1_path} (index 1).")
             self._add_index(index1_path, 1)
+            click.echo(f"\nAdding data from {index2_path} (index 2).")
             self._add_index(index2_path, 2)
 
-    def _add_index(self, index_path: pathlib.Path, index_id):
-        _logger.info(f"Adding data from {index_path}.")
+    def _add_index(self, index_path: pathlib.Path, index_id: int):
         index = Index(index_path).open()
 
         for file in tqdm.tqdm(index, unit="files"):
-            print(file)
+            self._add_file(file, index_id)
+            self._on_update()
+
+    def _add_file(self, filedesc: FileDesc, index_id: int):
+
+        filefrom = FileFrom(
+            fhash=filedesc.fhash,
+            origin=index_id,
+            path=filedesc.path,
+            size=filedesc.size,
+            created=filedesc.created,
+            modified=filedesc.modified,
+        )
+
+        try:
+            self.connection.execute(
+                "INSERT INTO file (hash,origin,path,size,created,modified)"
+                "  VALUES (?,?,?,?,datetime(?),datetime(?));",
+                filefrom,
+            )
+        except sqlite3.OperationalError:
+            _logger.error(f"Cannot add file to database: {filedesc}")
+            raise

@@ -3,8 +3,8 @@ import pathlib
 
 import click
 
+from findex.db import DbExistsError
 from findex.index import Index
-from findex.util import DbExistsError
 
 
 @click.group()
@@ -52,7 +52,10 @@ def index(directory, db, overwrite):
 @click.argument("index1", type=click.Path())
 @click.argument("index2", type=click.Path())
 @click.option(
-    "--db", type=click.Path(), default="fcomp.db", help="Path to generated comparison file."
+    "--db",
+    type=click.Path(),
+    default="fcomp.db",
+    help="Path to generated comparison file.",
 )
 @click.option(
     "--overwrite/--no-overwrite",

@@ -36,7 +36,9 @@ class Storage:
             raise DbExistsError(self.path)
 
         # compute path to schema of derived class:
-        schema_path = pathlib.Path(__file__).parent / 'schema' / f'{self.__class__.__name__}.sql'
+        schema_path = (
+            pathlib.Path(__file__).parent / "schema" / f"{self.__class__.__name__}.sql"
+        )
 
         _logger.info(f"Creating database {self.path}.")
         self.open()
@@ -46,7 +48,7 @@ class Storage:
     def open(self):
         if self.opened:
             _logger.warning("Database already open.")
-            return
+            return self
 
         _logger.info(f"Opening database {self.path}.")
         self.connection = sqlite3.connect(self.path)

@@ -9,7 +9,7 @@ class Comparator(Storage):
 
     def create(self):
         """Create and open sqlite DB with index schema."""
-        self.create_db('findex-schema.sql')
+        self.create_db()
 
     def compare(self, index1: pathlib.Path, index2: pathlib.Path):
         pass

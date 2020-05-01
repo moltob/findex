@@ -3,8 +3,6 @@ import logging
 import pathlib
 import sqlite3
 
-import pkg_resources
-
 DATABASE_TRANSACTION_SIZE = 10000
 """Maximum number of data sets before writing to database."""
 
@@ -31,17 +29,18 @@ class Storage:
     def opened(self):
         return bool(self.connection)
 
-    def create_db(self, schema_file):
+    def create_db(self):
         """Create and open sqlite DB with index schema."""
         if self.exists:
             _logger.error(f"Database already exists at {self.path}.")
             raise DbExistsError(self.path)
 
+        # compute path to schema of derived class:
+        schema_path = pathlib.Path(__file__).parent / 'schema' / f'{self.__class__.__name__}.sql'
+
         _logger.info(f"Creating database {self.path}.")
         self.open()
-        self.connection.executescript(
-            pkg_resources.resource_string(__package__, schema_file).decode()
-        )
+        self.connection.executescript(schema_path.read_text())
         self.close()
 
     def open(self):

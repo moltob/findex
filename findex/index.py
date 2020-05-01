@@ -34,7 +34,7 @@ class Index(Storage):
         """Create index of given directory."""
 
         _logger.info(f"Creating index of {path}.")
-        self.create_db('findex-schema.sql')
+        self.create_db()
         errors = []
 
         def _on_error(error: OSError):

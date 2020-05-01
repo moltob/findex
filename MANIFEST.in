@@ -1,1 +1,1 @@
-include findex/*.sql
+include findex/schema/*.sql

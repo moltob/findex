@@ -67,7 +67,7 @@ class Index(Storage):
             raise DbClosedError()
 
         with contextlib.closing(self.connection.cursor()) as cursor:
-            for row in cursor.execute("SELECT path,size,hash,datetime(created),modified from file"):
+            for row in cursor.execute("SELECT path,size,hash,created,modified from file"):
                 yield FileDesc._make(row)
 
 

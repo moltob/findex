@@ -63,7 +63,7 @@ class Storage:
             return self
 
         _logger.info(f"Opening database {self.path}.")
-        self.connection = sqlite3.connect(self.path)
+        self.connection = sqlite3.connect(self.path, detect_types=sqlite3.PARSE_DECLTYPES)
         self.updates_before_flush = DATABASE_TRANSACTION_SIZE
 
         return self

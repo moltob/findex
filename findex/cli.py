@@ -74,15 +74,12 @@ def compare(index1, index2, db, overwrite):
     try:
         c = Comparison(comparison_path)
         c.create(index1_path, index2_path)
-        c.open()
 
         click.echo('Missing files:')
         click.echo('\n'.join(f.path for f in c.iter_missing_files()))
 
         click.echo('New files:')
         click.echo('\n'.join(f.path for f in c.iter_new_files()))
-
-        c.close()
     except DbExistsError:
         click.secho(
             f"The comparison {db!r} already exists, please choose another file or use the "

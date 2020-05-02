@@ -7,7 +7,7 @@ import sqlite3
 import click
 import tqdm
 
-from findex.db import Storage
+from findex.db import Storage, opened_storage
 from findex.fs import FileDesc, FILEHASH_WALK_ERROR, count_files, walk
 
 _logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class Index(Storage):
         click.echo(f"Counting files in {path}...")
         count = count_files(path, _on_error)
 
-        with contextlib.closing(self.open()):
+        with opened_storage(self):
             _logger.debug(f"Writing {len(errors)} walk errors to database.")
             for errordesc in errors:
                 self._add_file(errordesc)
@@ -62,17 +62,16 @@ class Index(Storage):
             raise
 
     def __len__(self):
-        self._ensure_opened()
-        return self.connection.execute("SELECT COUNT(*) from file").fetchone()[0]
+        with opened_storage(self):
+            return self.connection.execute("SELECT COUNT(*) from file").fetchone()[0]
 
     def __iter__(self):
-        self._ensure_opened()
-
-        with contextlib.closing(self.connection.cursor()) as cursor:
-            for row in cursor.execute(
-                "SELECT path,size,hash,created,modified from file"
-            ):
-                yield FileDesc._make(row)
+        with opened_storage(self):
+            with contextlib.closing(self.connection.cursor()) as cursor:
+                for row in cursor.execute(
+                    "SELECT path,size,hash,created,modified from file"
+                ):
+                    yield FileDesc._make(row)
 
     @property
     def iter_duplicates(self):
@@ -90,7 +89,7 @@ class Comparison(Storage):
 
         self.create_db()
 
-        with contextlib.closing(self.open()):
+        with opened_storage(self):
             click.echo(f"\nAdding data from {index1_path} (index 1).")
             self._add_index(index1_path, "file1")
             click.echo(f"\nAdding data from {index2_path} (index 2).")
@@ -118,20 +117,20 @@ class Comparison(Storage):
         """Return files only in table_contained, but not in table_not_contained."""
         assert table_contained != table_not_contained
         
-        self._ensure_opened()
-        with contextlib.closing(self.connection.cursor()) as cursor:
-            for row in cursor.execute(
-                f"SELECT "
-                f"  {table_contained}.path,"
-                f"  {table_contained}.size,"
-                f"  {table_contained}.hash,"
-                f"  {table_contained}.created,"
-                f"  {table_contained}.modified "
-                f"FROM {table_contained} LEFT OUTER JOIN {table_not_contained} "
-                f"  ON {table_contained}.hash = {table_not_contained}.hash "
-                f"WHERE {table_not_contained}.hash IS NULL"
-            ):
-                yield FileDesc._make(row)
+        with opened_storage(self):
+            with contextlib.closing(self.connection.cursor()) as cursor:
+                for row in cursor.execute(
+                    f"SELECT "
+                    f"  {table_contained}.path,"
+                    f"  {table_contained}.size,"
+                    f"  {table_contained}.hash,"
+                    f"  {table_contained}.created,"
+                    f"  {table_contained}.modified "
+                    f"FROM {table_contained} LEFT OUTER JOIN {table_not_contained} "
+                    f"  ON {table_contained}.hash = {table_not_contained}.hash "
+                    f"WHERE {table_not_contained}.hash IS NULL"
+                ):
+                    yield FileDesc._make(row)
 
     def iter_missing_files(self):
         """Return files only in index 1, but not in 2."""

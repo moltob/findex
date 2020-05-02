@@ -83,7 +83,15 @@ class Storage:
         _logger.debug("Flushing transaction.")
         self.connection.commit()
 
-    def _ensure_opened(self):
-        if not self.opened:
-            _logger.error("Database closed, cannot access data.")
-            raise DbClosedError()
+
+@contextlib.contextmanager
+def opened_storage(storage: Storage):
+    opened_before = storage.opened
+
+    try:
+        if not opened_before:
+            storage.open()
+        yield storage
+    finally:
+        if not opened_before:
+            storage.close()

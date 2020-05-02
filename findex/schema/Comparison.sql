@@ -15,4 +15,6 @@ CREATE TABLE file2 (
 );
 
 CREATE INDEX idx_hash1 ON file1 (hash);
+CREATE INDEX idx_path1 ON file1 (path);
 CREATE INDEX idx_hash2 ON file2 (hash);
+CREATE INDEX idx_path2 ON file2 (path);

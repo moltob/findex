@@ -1,5 +1,4 @@
 """Index of files in a directory structure."""
-import collections
 import contextlib
 import logging
 import pathlib
@@ -8,13 +7,10 @@ import sqlite3
 import click
 import tqdm
 
-from findex.db import Storage, DbClosedError
+from findex.db import Storage
 from findex.fs import FileDesc, FILEHASH_WALK_ERROR, count_files, walk
 
 _logger = logging.getLogger(__name__)
-
-FileFrom = collections.namedtuple("FileFrom", "fhash origin path size created modified")
-"""Descriptor for a file with origin as used in comparison."""
 
 
 class Index(Storage):
@@ -65,10 +61,12 @@ class Index(Storage):
             _logger.error(f"Cannot add file to database: {filedesc}")
             raise
 
+    def __len__(self):
+        self._ensure_opened()
+        return self.connection.execute("SELECT COUNT(*) from file").fetchone()[0]
+
     def __iter__(self):
-        if not self.opened:
-            _logger.error("Database closed, cannot iterate.")
-            raise DbClosedError()
+        self._ensure_opened()
 
         with contextlib.closing(self.connection.cursor()) as cursor:
             for row in cursor.execute(
@@ -77,7 +75,7 @@ class Index(Storage):
                 yield FileDesc._make(row)
 
     @property
-    def duplicates(self):
+    def iter_duplicates(self):
         """Return list of duplicate files."""
         raise NotImplementedError()
 
@@ -94,46 +92,56 @@ class Comparison(Storage):
 
         with contextlib.closing(self.open()):
             click.echo(f"\nAdding data from {index1_path} (index 1).")
-            self._add_index(index1_path, 1)
+            self._add_index(index1_path, "file1")
             click.echo(f"\nAdding data from {index2_path} (index 2).")
-            self._add_index(index2_path, 2)
+            self._add_index(index2_path, "file2")
 
-    def _add_index(self, index_path: pathlib.Path, index_id: int):
+    def _add_index(self, index_path: pathlib.Path, table: str):
         index = Index(index_path).open()
 
         for file in tqdm.tqdm(index, unit="files"):
-            self._add_file(file, index_id)
+            self._add_file(file, table)
             self._on_update()
 
-    def _add_file(self, filedesc: FileDesc, index_id: int):
-
-        # extend fie descriptor with origin:
-        data = filedesc._asdict()
-        data["origin"] = index_id
-        filefrom = FileFrom(**data)
-
+    def _add_file(self, filedesc: FileDesc, table: str):
         try:
             self.connection.execute(
-                "INSERT INTO file (hash,origin,path,size,created,modified)"
-                "  VALUES (?,?,?,?,datetime(?),datetime(?));",
-                filefrom,
+                f"INSERT INTO {table} (path,size,hash,created,modified)"
+                f"  VALUES (?,?,?,datetime(?),datetime(?));",
+                filedesc,
             )
         except sqlite3.OperationalError:
             _logger.error(f"Cannot add file to database: {filedesc}")
             raise
 
-    @property
-    def missing_files(self):
+    def _iter_exclusive_files(self, table_contained, table_not_contained):
+        """Return files only in table_contained, but not in table_not_contained."""
+        assert table_contained != table_not_contained
+        
+        self._ensure_opened()
+        with contextlib.closing(self.connection.cursor()) as cursor:
+            for row in cursor.execute(
+                f"SELECT "
+                f"  {table_contained}.path,"
+                f"  {table_contained}.size,"
+                f"  {table_contained}.hash,"
+                f"  {table_contained}.created,"
+                f"  {table_contained}.modified "
+                f"FROM {table_contained} LEFT OUTER JOIN {table_not_contained} "
+                f"  ON {table_contained}.hash = {table_not_contained}.hash "
+                f"WHERE {table_not_contained}.hash IS NULL"
+            ):
+                yield FileDesc._make(row)
+
+    def iter_missing_files(self):
         """Return files only in index 1, but not in 2."""
-        raise NotImplementedError()
+        return self._iter_exclusive_files('file1', 'file2')
 
-    @property
-    def new_files(self):
+    def iter_new_files(self):
         """Return files only in index 2, but not in 1."""
-        raise NotImplementedError()
+        return self._iter_exclusive_files('file2', 'file1')
 
-    @property
-    def files_map(self):
+    def iter_files_map(self):
         """Return list of pairs of files in index 1 and their corresponding files in index 2.
 
         In case of duplicates in an index, there is possibly more than one file in each of the

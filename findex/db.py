@@ -4,6 +4,7 @@ import logging
 import pathlib
 import sqlite3
 
+
 DATABASE_TRANSACTION_SIZE = 10000
 """Maximum number of data sets before writing to database."""
 
@@ -33,13 +34,6 @@ class Storage:
     @property
     def opened(self):
         return bool(self.connection)
-
-    def __len__(self):
-        if not self.opened:
-            _logger.error("Database closed, cannot count.")
-            raise DbClosedError()
-
-        return self.connection.execute("SELECT COUNT(*) from file").fetchone()[0]
 
     def create_db(self):
         """Create and open sqlite DB with index schema."""
@@ -88,3 +82,8 @@ class Storage:
     def _flush(self):
         _logger.debug("Flushing transaction.")
         self.connection.commit()
+
+    def _ensure_opened(self):
+        if not self.opened:
+            _logger.error("Database closed, cannot access data.")
+            raise DbClosedError()

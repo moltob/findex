@@ -1,12 +1,18 @@
-CREATE TABLE file (
-    hash TEXT NOT NULL,
-    origin INTEGER NOT NULL,  -- ID of index where file comes from
-    path TEXT NOT NULL,
+CREATE TABLE file1 (
+    path TEXT PRIMARY KEY,
     size INTEGER NOT NULL,
+    hash TEXT NOT NULL,
     created TIMESTAMP NULL,
     modified TIMESTAMP NULL
 );
 
-CREATE INDEX idx_hash ON file (hash);
-CREATE INDEX idx_path ON file (path);
-CREATE UNIQUE INDEX idx_path_from ON file (origin,path);
+CREATE TABLE file2 (
+    path TEXT PRIMARY KEY,
+    size INTEGER NOT NULL,
+    hash TEXT NOT NULL,
+    created TIMESTAMP NULL,
+    modified TIMESTAMP NULL
+);
+
+CREATE INDEX idx_hash1 ON file1 (hash);
+CREATE INDEX idx_hash2 ON file2 (hash);

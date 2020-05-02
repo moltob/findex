@@ -52,3 +52,32 @@ def test__updated_files(comparison):
     files = list(pathlib.Path(f.path) for f in comparison.iter_updated())
     assert len(files) == 1
     assert pathlib.Path("updated1.txt") in files
+
+
+def test__group_by_content(comparison):
+    file_groups = [
+        (set(map(pathlib.Path, g.files1)), set(map(pathlib.Path, g.files2)))
+        for g in comparison.iter_group_by_content()
+    ]
+
+    assert len(file_groups) == 4
+
+    assert (
+        {pathlib.Path("single.txt")},
+        {pathlib.Path("sub2", "single.txt")},
+    ) in file_groups
+
+    assert (
+        {pathlib.Path("same1.txt"), pathlib.Path("sub1", "same1_duplicate1.txt")},
+        {pathlib.Path("same1.txt")},
+    ) in file_groups
+
+    assert (
+        {pathlib.Path("sub1", "same2.txt")},
+        {pathlib.Path("same2-moved.txt")},
+    ) in file_groups
+
+    assert (
+        {pathlib.Path("empty1.txt"), pathlib.Path("sub1", "empty2.txt")},
+        {pathlib.Path("empty3.txt")},
+    ) in file_groups

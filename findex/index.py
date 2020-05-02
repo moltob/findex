@@ -1,4 +1,5 @@
 """Index of files in a directory structure."""
+import collections
 import contextlib
 import logging
 import pathlib
@@ -77,6 +78,10 @@ class Index(Storage):
     def iter_duplicates(self):
         """Return list of duplicate files."""
         raise NotImplementedError()
+
+
+FilesMap = collections.namedtuple("FilesMap", "fhash files1 files2")
+"""Files in comparison with identical content hash."""
 
 
 class Comparison(Storage):
@@ -169,13 +174,29 @@ class Comparison(Storage):
                 ):
                     yield FileDesc._make(row)
 
-    def iter_files_map(self):
-        """Return list of pairs of files in index 1 and their corresponding files in index 2.
+    def iter_group_by_content(self):
+        """Return list of pairs of paths in index 1 and index 2 that have identical content.
 
         In case of duplicates in an index, there is possibly more than one file in each of the
-        elements.
+        pairs' elements.
         """
-        raise NotImplementedError()
+        with opened_storage(self):
+            with contextlib.closing(self.connection.cursor()) as cursor:
+                for row in cursor.execute(
+                    "SELECT "
+                    "  file1.hash,"
+                    "  group_concat(DISTINCT file1.path),"
+                    "  group_concat(DISTINCT file2.path) "
+                    "FROM file1 JOIN file2 "
+                    "  ON file1.hash == file2.hash "
+                    "GROUP BY file1.hash"
+                ):
+                    fmap = FilesMap._make(row)
+
+                    # unpack CVS fields:
+                    yield fmap._replace(
+                        files1=fmap.files1.split(","), files2=fmap.files2.split(",")
+                    )
 
     def report_raw(self):
         click.echo()

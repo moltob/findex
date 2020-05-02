@@ -6,7 +6,7 @@ import shutil
 import pytest
 
 
-@pytest.fixture('module', autouse=True)
+@pytest.fixture("module", autouse=True)
 def cwd_module_dir():
     """Change current directory to this module's folder to access inputs and write outputs."""
     cwd = os.getcwd()
@@ -15,9 +15,9 @@ def cwd_module_dir():
     os.chdir(cwd)
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def output_dir(cwd_module_dir):
-    path = 'output'
+    path = "output"
     shutil.rmtree(path, ignore_errors=True)
     os.makedirs(path)
     yield pathlib.Path(path)

@@ -111,9 +111,16 @@ class Comparison(Storage):
             _logger.error(f"Cannot add file to database: {filedesc}")
             raise
 
-    def _iter_exclusive_files(self, table_contained, table_not_contained):
+    def _iter_exclusive_files(
+        self, table_contained, table_not_contained, *, include_updated=False
+    ):
         """Return files only in table_contained, but not in table_not_contained."""
         assert table_contained != table_not_contained
+
+        if include_updated:
+            excluded_paths = {}
+        else:
+            excluded_paths = {f.path for f in self.iter_updated()}
 
         with opened_storage(self):
             with contextlib.closing(self.connection.cursor()) as cursor:
@@ -128,16 +135,23 @@ class Comparison(Storage):
                     f"  ON {table_contained}.hash = {table_not_contained}.hash "
                     f"WHERE {table_not_contained}.hash IS NULL"
                 ):
-                    yield FileDesc._make(row)
+                    file = FileDesc._make(row)
 
-    def iter_missing(self):
+                    if file.path not in excluded_paths:
+                        yield file
+
+    def iter_missing(self, *, include_updated=False):
         """Return files only in index 1, but not in 2."""
-        return self._iter_exclusive_files("file1", "file2")
+        return self._iter_exclusive_files(
+            "file1", "file2", include_updated=include_updated
+        )
 
-    def iter_new(self):
+    def iter_new(self, *, include_updated=False):
         """Return files only in index 2, but not in 1."""
-        return self._iter_exclusive_files("file2", "file1")
-    
+        return self._iter_exclusive_files(
+            "file2", "file1", include_updated=include_updated
+        )
+
     def iter_updated(self):
         """Return files that have an identical path but different hashes."""
         with opened_storage(self):
@@ -154,7 +168,6 @@ class Comparison(Storage):
                     "WHERE file1.hash != file2.hash"
                 ):
                     yield FileDesc._make(row)
-
 
     def iter_files_map(self):
         """Return list of pairs of files in index 1 and their corresponding files in index 2.

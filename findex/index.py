@@ -61,11 +61,11 @@ class Index(Storage):
             _logger.error(f"Cannot add file to database: {filedesc}")
             raise
 
-    def __len__(self):
+    def count(self):
         with opened_storage(self):
             return self.connection.execute("SELECT COUNT(*) from file").fetchone()[0]
 
-    def __iter__(self):
+    def iter_all(self):
         with opened_storage(self):
             with contextlib.closing(self.connection.cursor()) as cursor:
                 for row in cursor.execute(
@@ -98,7 +98,7 @@ class Comparison(Storage):
     def _add_index(self, index_path: pathlib.Path, table: str):
         index = Index(index_path).open()
 
-        for file in tqdm.tqdm(index, unit="files"):
+        for file in tqdm.tqdm(index.iter_all(), total=index.count(), unit="files"):
             self._add_file(file, table)
             self._on_update()
 

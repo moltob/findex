@@ -60,7 +60,7 @@ def walk(top: pathlib.Path) -> t.Iterable[FileDesc]:
 
             _logger.debug(f"{filehash} {filepath}")
             yield FileDesc(
-                path=str(filepath),
+                path=str(filepath.relative_to(top)),
                 fhash=filehash,
                 size=filesize,
                 created=datetime.datetime.fromtimestamp(stat.st_ctime),

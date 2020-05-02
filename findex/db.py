@@ -41,6 +41,10 @@ class Storage:
             _logger.error(f"Database already exists at {self.path}.")
             raise DbExistsError(self.path)
 
+        parent = self.path.parent
+        if not parent.exists():
+            parent.mkdir(parents=True)
+
         # compute path to schema of derived class:
         schema_path = (
             pathlib.Path(__file__).parent / "schema" / f"{self.__class__.__name__}.sql"

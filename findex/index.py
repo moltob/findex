@@ -116,7 +116,7 @@ class Comparison(Storage):
     def _iter_exclusive_files(self, table_contained, table_not_contained):
         """Return files only in table_contained, but not in table_not_contained."""
         assert table_contained != table_not_contained
-        
+
         with opened_storage(self):
             with contextlib.closing(self.connection.cursor()) as cursor:
                 for row in cursor.execute(
@@ -134,11 +134,11 @@ class Comparison(Storage):
 
     def iter_missing_files(self):
         """Return files only in index 1, but not in 2."""
-        return self._iter_exclusive_files('file1', 'file2')
+        return self._iter_exclusive_files("file1", "file2")
 
     def iter_new_files(self):
         """Return files only in index 2, but not in 1."""
-        return self._iter_exclusive_files('file2', 'file1')
+        return self._iter_exclusive_files("file2", "file1")
 
     def iter_files_map(self):
         """Return list of pairs of files in index 1 and their corresponding files in index 2.
@@ -147,3 +147,11 @@ class Comparison(Storage):
         elements.
         """
         raise NotImplementedError()
+
+    def report_raw(self):
+        click.echo()
+        click.secho("Missing files:", underline=True, bold=True, fg="bright_magenta")
+        click.echo("\n".join(f.path for f in self.iter_missing_files()))
+        click.echo()
+        click.secho("New files:", underline=True, bold=True, fg="bright_cyan")
+        click.echo("\n".join(f.path for f in self.iter_new_files()))

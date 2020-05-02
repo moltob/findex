@@ -72,14 +72,7 @@ def compare(index1, index2, db, overwrite):
         comparison_path.unlink(missing_ok=True)
 
     try:
-        c = Comparison(comparison_path)
-        c.create(index1_path, index2_path)
-
-        click.echo('Missing files:')
-        click.echo('\n'.join(f.path for f in c.iter_missing_files()))
-
-        click.echo('New files:')
-        click.echo('\n'.join(f.path for f in c.iter_new_files()))
+        Comparison(comparison_path).create(index1_path, index2_path)
     except DbExistsError:
         click.secho(
             f"The comparison {db!r} already exists, please choose another file or use the "
@@ -89,6 +82,18 @@ def compare(index1, index2, db, overwrite):
     except Exception as ex:
         click.secho(f"An unexpected error occured: {ex}.", fg="bright_red")
         raise
+
+
+@cli.command()
+@click.argument("comparison", type=click.Path(exists=True), default="fcomp.db")
+def report(comparison):
+    """Reporting.
+
+    COMPARISON is the path to a comparison which is analyzed.
+    """
+    comparison_path = pathlib.Path(comparison).resolve()
+    c = Comparison(comparison_path)
+    c.report_raw()
 
 
 if __name__ == "__main__":

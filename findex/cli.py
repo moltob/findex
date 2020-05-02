@@ -64,15 +64,15 @@ def index(directory, db, overwrite):
 )
 def compare(index1, index2, db, overwrite):
     """Compare two file index files INDEX1 and INDEX2."""
-    index1_path = pathlib.Path(index1)
-    index2_path = pathlib.Path(index2)
+    index1 = Index(pathlib.Path(index1))
+    index2 = Index(pathlib.Path(index2))
 
     comparison_path = pathlib.Path(db).resolve()
     if overwrite:
         comparison_path.unlink(missing_ok=True)
 
     try:
-        Comparison(comparison_path).create(index1_path, index2_path)
+        Comparison(comparison_path).create(index1, index2)
     except DbExistsError:
         click.secho(
             f"The comparison {db!r} already exists, please choose another file or use the "

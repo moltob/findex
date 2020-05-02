@@ -16,23 +16,29 @@ def comparison(cwd_module_dir, output_dir):
     index2.create(input_dir / 'folder2')
 
     comparison = Comparison(output_dir / 'comparison.db')
-    comparison.create(index1.path, index2.path)
+    comparison.create(index1, index2)
     return comparison
 
 
 def test__missing_files(comparison):
-    missing_files = list(pathlib.Path(f.path) for f in comparison.iter_missing_files())
-    assert pathlib.Path('missing1.txt') in missing_files
+    files = list(pathlib.Path(f.path) for f in comparison.iter_missing())
+    assert pathlib.Path('missing1.txt') in files
 
-    # for now also changed files are considered missing:
-    assert len(missing_files) == 2
-    assert pathlib.Path('updated1.txt') in missing_files
+    # also changed files are considered missing:
+    assert len(files) == 2
+    assert pathlib.Path('updated1.txt') in files
 
 
 def test__new_files(comparison):
-    new_files = list(pathlib.Path(f.path) for f in comparison.iter_new_files())
-    assert pathlib.Path('sub2', 'new1.txt') in new_files
+    files = list(pathlib.Path(f.path) for f in comparison.iter_new())
+    assert pathlib.Path('sub2', 'new1.txt') in files
 
-    # for now also changed files are considered new:
-    assert len(new_files) == 2
-    assert pathlib.Path('updated1.txt') in new_files
+    # also changed files are considered new:
+    assert len(files) == 2
+    assert pathlib.Path('updated1.txt') in files
+
+
+def test__updated_files(comparison):
+    files = list(pathlib.Path(f.path) for f in comparison.iter_updated())
+    assert len(files) == 1
+    assert pathlib.Path('updated1.txt') in files

@@ -82,22 +82,20 @@ class Index(Storage):
 class Comparison(Storage):
     """Comparison of two index databases."""
 
-    def create(self, index1_path: pathlib.Path, index2_path: pathlib.Path):
+    def create(self, index1: Index, index2: Index):
         """Create comparison of two file index files."""
 
-        _logger.info(f"Creating comparison of {index1_path} and {index2_path}.")
+        _logger.info(f"Creating comparison {self.path}.")
 
         self.create_db()
 
         with opened_storage(self):
-            click.echo(f"\nAdding data from {index1_path} (index 1).")
-            self._add_index(index1_path, "file1")
-            click.echo(f"\nAdding data from {index2_path} (index 2).")
-            self._add_index(index2_path, "file2")
+            click.echo(f"\nAdding data from {index1.path}.")
+            self._add_index(index1, "file1")
+            click.echo(f"\nAdding data from {index2.path}.")
+            self._add_index(index2, "file2")
 
-    def _add_index(self, index_path: pathlib.Path, table: str):
-        index = Index(index_path).open()
-
+    def _add_index(self, index: Index, table: str):
         for file in tqdm.tqdm(index.iter_all(), total=index.count(), unit="files"):
             self._add_file(file, table)
             self._on_update()
@@ -132,13 +130,31 @@ class Comparison(Storage):
                 ):
                     yield FileDesc._make(row)
 
-    def iter_missing_files(self):
+    def iter_missing(self):
         """Return files only in index 1, but not in 2."""
         return self._iter_exclusive_files("file1", "file2")
 
-    def iter_new_files(self):
+    def iter_new(self):
         """Return files only in index 2, but not in 1."""
         return self._iter_exclusive_files("file2", "file1")
+    
+    def iter_updated(self):
+        """Return files that have an identical path but different hashes."""
+        with opened_storage(self):
+            with contextlib.closing(self.connection.cursor()) as cursor:
+                for row in cursor.execute(
+                    "SELECT "
+                    "  file1.path,"
+                    "  file1.size,"
+                    "  file1.hash,"
+                    "  file1.created,"
+                    "  file1.modified "
+                    "FROM file1 JOIN file2 "
+                    "  ON file1.path = file2.path "
+                    "WHERE file1.hash != file2.hash"
+                ):
+                    yield FileDesc._make(row)
+
 
     def iter_files_map(self):
         """Return list of pairs of files in index 1 and their corresponding files in index 2.
@@ -151,7 +167,7 @@ class Comparison(Storage):
     def report_raw(self):
         click.echo()
         click.secho("Missing files:", underline=True, bold=True, fg="bright_magenta")
-        click.echo("\n".join(f.path for f in self.iter_missing_files()))
+        click.echo("\n".join(f.path for f in self.iter_missing()))
         click.echo()
         click.secho("New files:", underline=True, bold=True, fg="bright_cyan")
-        click.echo("\n".join(f.path for f in self.iter_new_files()))
+        click.echo("\n".join(f.path for f in self.iter_new()))

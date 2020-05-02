@@ -202,9 +202,16 @@ class Comparison(Storage):
         click.echo()
         click.secho("Missing files:", underline=True, bold=True, fg="bright_cyan")
         click.echo("\n".join(f.path for f in self.iter_missing()))
+
         click.echo()
         click.secho("New files:", underline=True, bold=True, fg="bright_cyan")
         click.echo("\n".join(f.path for f in self.iter_new()))
+
         click.echo()
         click.secho("Updated files:", underline=True, bold=True, fg="bright_cyan")
         click.echo("\n".join(f.path for f in self.iter_updated()))
+
+        click.echo()
+        click.secho("Identical files:", underline=True, bold=True, fg="bright_cyan")
+        num_groups = sum(1 for _ in self.iter_content_groups())
+        click.echo(f"{num_groups} groups with identical content in both indices.")

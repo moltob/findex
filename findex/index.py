@@ -193,7 +193,7 @@ class Comparison(Storage):
                 ):
                     fmap = FilesMap._make(row)
 
-                    # unpack CVS fields:
+                    # unpack CSV fields:
                     yield fmap._replace(
                         files1=fmap.files1.split(","), files2=fmap.files2.split(",")
                     )

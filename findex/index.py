@@ -174,7 +174,7 @@ class Comparison(Storage):
                 ):
                     yield FileDesc._make(row)
 
-    def iter_group_by_content(self):
+    def iter_content_groups(self):
         """Return list of pairs of paths in index 1 and index 2 that have identical content.
 
         In case of duplicates in an index, there is possibly more than one file in each of the

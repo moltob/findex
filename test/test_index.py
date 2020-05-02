@@ -54,10 +54,10 @@ def test__updated_files(comparison):
     assert pathlib.Path("updated1.txt") in files
 
 
-def test__group_by_content(comparison):
+def test__content_groups(comparison):
     file_groups = [
         (set(map(pathlib.Path, g.files1)), set(map(pathlib.Path, g.files2)))
-        for g in comparison.iter_group_by_content()
+        for g in comparison.iter_content_groups()
     ]
 
     assert len(file_groups) == 4

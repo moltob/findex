@@ -20,6 +20,15 @@ def comparison(cwd_module_dir, output_dir):
     return comparison
 
 
+def test__missing_files(comparison):
+    missing_files = list(pathlib.Path(f.path) for f in comparison.iter_missing_files())
+    assert pathlib.Path('missing1.txt') in missing_files
+
+    # for now also changed files are considered missing:
+    assert len(missing_files) == 2
+    assert pathlib.Path('updated1.txt') in missing_files
+
+
 def test__new_files(comparison):
     new_files = list(pathlib.Path(f.path) for f in comparison.iter_new_files())
     assert pathlib.Path('sub2', 'new1.txt') in new_files

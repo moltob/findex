@@ -86,7 +86,8 @@ def safe_file_access(path: pathlib.Path, path_func):
         try:
             # traverse down to file one folder at a time:
             for parent in reversed(path.parents):
-                os.chdir(parent)
+                if parent != pathlib.Path():
+                    os.chdir(parent.name)
 
             return path_func(path.name)
         finally:

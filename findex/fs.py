@@ -82,11 +82,11 @@ def safe_file_access(path: pathlib.Path, path_func):
     except OSError as ex:
         _logger.warning(f'Access to {path} failed (ex), retrying with relative path.')
 
-        cwd = os.getcwd()
+        cwd = pathlib.Path(os.getcwd()).resolve()
         try:
             # traverse down to file one folder at a time:
             for parent in reversed(path.parents):
-                if parent != pathlib.Path():
+                if parent.resolve() != cwd:
                     os.chdir(parent.name)
 
             return path_func(path.name)

@@ -30,8 +30,8 @@ def index(directory, db, overwrite):
     DIRECTORY is the path to the root of the file tree being indexed.
     """
 
-    index_path = pathlib.Path(db).resolve()
-    directory_path = pathlib.Path(directory).resolve()
+    index_path = pathlib.Path(db).absolute()
+    directory_path = pathlib.Path(directory).absolute()
     if overwrite:
         index_path.unlink(missing_ok=True)
 
@@ -67,7 +67,7 @@ def compare(index1, index2, db, overwrite):
     index1 = Index(pathlib.Path(index1))
     index2 = Index(pathlib.Path(index2))
 
-    comparison_path = pathlib.Path(db).resolve()
+    comparison_path = pathlib.Path(db).absolute()
     if overwrite:
         comparison_path.unlink(missing_ok=True)
 
@@ -91,7 +91,7 @@ def report(comparison):
 
     COMPARISON is the path to a comparison which is analyzed.
     """
-    comparison_path = pathlib.Path(comparison).resolve()
+    comparison_path = pathlib.Path(comparison).absolute()
     c = Comparison(comparison_path)
     c.report_raw()
 

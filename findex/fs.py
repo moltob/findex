@@ -46,7 +46,7 @@ def walk(top: pathlib.Path) -> t.Iterable[FileDesc]:
 
         for filename in filenames:
             filepath = root / filename
-            stat = safe_file_access(filepath, lambda p: p.stat())
+            stat = filepath.stat()
             filesize = stat.st_size
 
             if filesize == 0:
@@ -69,25 +69,7 @@ def walk(top: pathlib.Path) -> t.Iterable[FileDesc]:
 
 
 def compute_filehash(filepath: pathlib.Path) -> str:
-    with safe_file_access(filepath, lambda p: open(p, "rb")) as file:
+    with open(filepath, "rb") as file:
         with mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ) as data:
             sha1 = hashlib.sha1(data)
     return sha1.hexdigest()
-
-
-def safe_file_access(path: pathlib.Path, path_func):
-    """Trys to apply callable to path. Retries in case of long filenames."""
-    try:
-        return path_func(path)
-    except OSError as ex:
-        _logger.warning(f'Access to {path} failed (ex), retrying with relative path.')
-
-        cwd = os.getcwd()
-        try:
-            # traverse down to file one folder at a time:
-            for parent in reversed(path.parents):
-                os.chdir(parent)
-
-            return path_func(path.name)
-        finally:
-            os.chdir(cwd)

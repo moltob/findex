@@ -80,7 +80,7 @@ class Index(Storage):
         raise NotImplementedError()
 
 
-FilesMap = collections.namedtuple("FilesMap", "fhash files1 files2")
+FilesMap = collections.namedtuple("FilesMap", "fhash size files1 files2")
 """Files in comparison with identical content hash."""
 
 
@@ -138,7 +138,8 @@ class Comparison(Storage):
                     f"  {table_contained}.modified "
                     f"FROM {table_contained} LEFT OUTER JOIN {table_not_contained} "
                     f"  ON {table_contained}.hash = {table_not_contained}.hash "
-                    f"WHERE {table_not_contained}.hash IS NULL"
+                    f"WHERE {table_not_contained}.hash IS NULL "
+                    f"ORDER BY {table_contained}.path"
                 ):
                     file = FileDesc._make(row)
 
@@ -170,7 +171,8 @@ class Comparison(Storage):
                     "  file1.modified "
                     "FROM file1 JOIN file2 "
                     "  ON file1.path = file2.path "
-                    "WHERE file1.hash != file2.hash"
+                    "WHERE file1.hash != file2.hash "
+                    "ORDER BY file1.path"
                 ):
                     yield FileDesc._make(row)
 
@@ -185,11 +187,13 @@ class Comparison(Storage):
                 for row in cursor.execute(
                     "SELECT "
                     "  file1.hash,"
+                    "  file1.size,"
                     "  group_concat(DISTINCT file1.path),"
                     "  group_concat(DISTINCT file2.path) "
                     "FROM file1 JOIN file2 "
                     "  ON file1.hash == file2.hash "
-                    "GROUP BY file1.hash"
+                    "GROUP BY file1.hash,file1.size "
+                    "ORDER BY file1.size DESC"
                 ):
                     fmap = FilesMap._make(row)
 

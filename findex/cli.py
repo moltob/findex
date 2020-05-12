@@ -5,6 +5,7 @@ import click
 
 from findex.db import DbExistsError
 from findex.index import Index, Comparison
+from findex.reporting import ComparisonReport
 
 
 @click.group()
@@ -86,14 +87,23 @@ def compare(index1, index2, db, overwrite):
 
 @cli.command()
 @click.argument("comparison", type=click.Path(exists=True), default="fcomp.db")
-def report(comparison):
+@click.option(
+    "--xlsx",
+    type=click.Path(),
+    help="If specified an Excel report file is generated.",
+)
+def report(comparison, xlsx):
     """Reporting.
 
     COMPARISON is the path to a comparison which is analyzed.
     """
     comparison_path = pathlib.Path(comparison).absolute()
     c = Comparison(comparison_path)
-    c.report_raw()
+
+    if not xlsx:
+        c.report_raw()
+    else:
+        ComparisonReport(c).write(pathlib.Path(xlsx))
 
 
 if __name__ == "__main__":

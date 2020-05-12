@@ -7,7 +7,7 @@ setup(
     author="Mike Pagel",
     author_email="mike@mpagel.de",
     packages=find_packages(exclude=["tests"]),
-    install_requires=["click", "colorama", "daiquiri", "tqdm"],
+    install_requires=["click", "colorama", "daiquiri", "tqdm", "xlsxwriter"],
     include_package_data=True,
     entry_points={"console_scripts": ["findex = findex.cli:cli"]},
 )

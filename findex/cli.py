@@ -90,10 +90,11 @@ def compare(index1, index2, db, overwrite):
 @click.option(
     "--xlsx",
     type=click.Path(),
-    help="If specified an Excel report file is generated.",
+    help="If specified an Excel report file is generated. If not a short report is printed to the "
+    "command line.",
 )
 def report(comparison, xlsx):
-    """Reporting.
+    """Report comparison results.
 
     COMPARISON is the path to a comparison which is analyzed.
     """

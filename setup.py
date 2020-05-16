@@ -1,10 +1,11 @@
 from setuptools import setup, find_packages
 
-import findex
+# TODO: fix redundant version
+version = "1.1.0"
 
 setup(
     name="findex",
-    version=findex.__version__,
+    version=version,
     description="Hash-based indices of directories.",
     author="Mike Pagel",
     author_email="mike@mpagel.de",

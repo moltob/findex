@@ -1,5 +1,6 @@
 """Reporting of a comparison result."""
 import contextlib
+import datetime
 import logging
 import pathlib
 import typing as t
@@ -7,7 +8,7 @@ import typing as t
 import click
 import xlsxwriter
 
-from findex.db import META_DATE, META_VERSION
+from findex.db import META_CREATED, META_VERSION
 from findex.fs import FileDesc
 from findex.index import Comparison, META_ROOT_RESOLVED
 
@@ -189,30 +190,44 @@ class ComparisonReport:
             0, 0, "Directory Tree Comparison", cell_format=self.formats["header"]
         )
 
-        worksheet.set_column(0, 0, width=60)
-        worksheet.set_column(1, 1, width=COL_WIDTH_PATH)
+        worksheet.set_column(0, 0, width=40, cell_format=self.formats["summary_key"])
+        worksheet.set_column(1, 1, width=40, cell_format=self.formats["summary_value"])
+        worksheet.set_column(2, 2, width=COL_WIDTH_DATE, cell_format=self.formats["datetime"])
 
         with contextlib.closing(self.comparison.open()):
+
+            created = datetime.datetime.fromisoformat(
+                self.comparison.get_meta(META_CREATED)
+            )
+            created1 = datetime.datetime.fromisoformat(
+                self.comparison.get_index_meta(META_CREATED, "1")
+            )
+            created2 = datetime.datetime.fromisoformat(
+                self.comparison.get_index_meta(META_CREATED, "2")
+            )
+
             data = [
-                ["Created:", self.comparison.get_meta(META_DATE)],
-                ["Version:", self.comparison.get_meta(META_VERSION)],
-                ["", ""],
-                ["Index 1:", self.comparison.get_index_meta(META_ROOT_RESOLVED, "1")],
-                ["Created:", self.comparison.get_index_meta(META_DATE, "1")],
-                ["", ""],
-                ["Index 2:", self.comparison.get_index_meta(META_ROOT_RESOLVED, "2")],
-                ["Created:", self.comparison.get_index_meta(META_DATE, "2")],
-                ["", ""],
-                ["Missing files:", missing_files],
-                ["Updated files:", updated_files],
-                ["New files:", new_files],
-                ["Moved files with identical content:", moved_groups],
+                ["Comparison:", self.comparison.get_meta(META_VERSION), created],
+                [
+                    "Index 1:",
+                    self.comparison.get_index_meta(META_ROOT_RESOLVED, "1"),
+                    created1,
+                ],
+                [
+                    "Index 2:",
+                    self.comparison.get_index_meta(META_ROOT_RESOLVED, "2"),
+                    created2,
+                ],
+                ["", "", ""],
+                ["Missing files:", missing_files, ""],
+                ["Updated files:", updated_files, ""],
+                ["New files:", new_files, ""],
+                ["Moved files with identical content:", moved_groups, ""],
             ]
 
         offset = 2
         for index, entry in enumerate(data):
-            key, value = entry
-            worksheet.write_string(
-                offset + index, 0, key, cell_format=self.formats["summary_key"]
-            )
-            worksheet.write(offset + index, 1, value, self.formats["summary_value"])
+            key, value1, value2 = entry
+            worksheet.write_string(offset + index, 0, key)
+            worksheet.write(offset + index, 1, value1)
+            worksheet.write(offset + index, 2, value2)

@@ -11,7 +11,7 @@ import findex
 DATABASE_TRANSACTION_SIZE = 10000
 """Maximum number of data sets before writing to database."""
 
-META_DATE = "DATE"
+META_CREATED = "CREATED"
 META_VERSION = "VERSION"
 
 _logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class Storage:
             for schema_path in schema_paths:
                 self.connection.executescript(schema_path.read_text())
 
-            self._put_meta(META_DATE, str(datetime.datetime.now()))
+            self._put_meta(META_CREATED, datetime.datetime.now().isoformat())
             self._put_meta(META_VERSION, findex.__version__)
 
     def open(self):
@@ -119,7 +119,7 @@ class Storage:
                 with contextlib.closing(self.connection.cursor()) as cursor:
                     yield from cursor.execute("SELECT key,value from meta")
         except Exception as exc:
-            _logger.warning(f'Cannot read meta data from {self.path}: {exc}')
+            _logger.warning(f"Cannot read meta data from {self.path}: {exc}")
 
 
 @contextlib.contextmanager

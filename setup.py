@@ -1,8 +1,10 @@
 from setuptools import setup, find_packages
 
+import findex
+
 setup(
     name="findex",
-    version="1.0.5",
+    version=findex.__version__,
     description="Hash-based indices of directories.",
     author="Mike Pagel",
     author_email="mike@mpagel.de",

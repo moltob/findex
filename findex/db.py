@@ -1,12 +1,18 @@
 """Index utilities."""
 import contextlib
+import datetime
 import logging
 import pathlib
 import sqlite3
+import typing as t
 
+import findex
 
 DATABASE_TRANSACTION_SIZE = 10000
 """Maximum number of data sets before writing to database."""
+
+META_DATE = "DATE"
+META_VERSION = "VERSION"
 
 _logger = logging.getLogger(__name__)
 
@@ -46,14 +52,18 @@ class Storage:
             parent.mkdir(parents=True)
 
         # compute path to schema of derived class:
-        schema_path = (
-            pathlib.Path(__file__).parent / "schema" / f"{self.__class__.__name__}.sql"
+        schema_folder = pathlib.Path(__file__).parent / "schema"
+        schema_paths = (
+            schema_folder / f"{name}.sql" for name in (self.__class__.__name__, "Meta")
         )
 
         _logger.info(f"Creating database {self.path}.")
-        self.open()
-        self.connection.executescript(schema_path.read_text())
-        self.close()
+        with contextlib.closing(self.open()):
+            for schema_path in schema_paths:
+                self.connection.executescript(schema_path.read_text())
+
+            self._put_meta(META_DATE, str(datetime.datetime.now()))
+            self._put_meta(META_VERSION, findex.__version__)
 
     def open(self):
         if self.opened:
@@ -86,6 +96,20 @@ class Storage:
     def _flush(self):
         _logger.debug("Flushing transaction.")
         self.connection.commit()
+
+    def _put_meta(self, key: str, value: str):
+        """Add meta information to storage."""
+        assert self.connection, "database must be open"
+        self.connection.execute(
+            "INSERT INTO meta (key,value) VALUES (?,?);", (key, value)
+        )
+
+    def _get_meta(self, key: str) -> t.Optional[str]:
+        """Returns value for given key or None if not found."""
+        assert self.connection, "database must be open"
+        return self.connection.execute(
+            "SELECT value FROM meta WHERE key=(?)", (key,)
+        ).fetchone()[0]
 
 
 @contextlib.contextmanager

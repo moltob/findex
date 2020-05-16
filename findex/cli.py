@@ -3,12 +3,14 @@ import pathlib
 
 import click
 
+from findex import __version__
 from findex.db import DbExistsError
 from findex.index import Index, Comparison
 from findex.reporting import ComparisonReport
 
 
 @click.group()
+@click.version_option(__version__)
 def cli():
     import daiquiri
 

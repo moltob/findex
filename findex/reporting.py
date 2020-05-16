@@ -7,6 +7,7 @@ import typing as t
 import click
 import xlsxwriter
 
+from findex.db import META_DATE
 from findex.fs import FileDesc
 from findex.index import Comparison
 
@@ -191,15 +192,17 @@ class ComparisonReport:
         worksheet.set_column(0, 0, width=60)
         worksheet.set_column(1, 1, width=COL_WIDTH_PATH)
 
-        data = [
-            ["Location 1:", "todo"],
-            ["Location 2:", "todo"],
-            ["", ""],
-            ["Missing files:", missing_files],
-            ["Updated files:", updated_files],
-            ["New files:", new_files],
-            ["Moved files with identical content:", moved_groups],
-        ]
+        with contextlib.closing(self.comparison.open()):
+            data = [
+                ["Location 1:", "todo"],
+                ["Location 2:", "todo"],
+                ["Created:", self.comparison._get_meta(META_DATE)],
+                ["", ""],
+                ["Missing files:", missing_files],
+                ["Updated files:", updated_files],
+                ["New files:", new_files],
+                ["Moved files with identical content:", moved_groups],
+            ]
 
         offset = 2
         for index, entry in enumerate(data):

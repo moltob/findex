@@ -2,6 +2,7 @@
 import contextlib
 import logging
 import pathlib
+import typing as t
 
 import click
 import xlsxwriter
@@ -24,8 +25,6 @@ class ComparisonReport:
 
         self.workbook = None
         self.formats = None
-        self.date_format = None
-        self.currency_format = None
 
     def write(self, path: pathlib.Path):
         with contextlib.closing(xlsxwriter.Workbook(path)) as workbook:
@@ -46,20 +45,35 @@ class ComparisonReport:
                 ),
                 "textlist": workbook.add_format({"text_wrap": True, "valign": "top"}),
                 "number": workbook.add_format({"num_format": 0x01, "valign": "top"}),
+                "header": workbook.add_format({"font_size": 20, "bold": True}),
+                "summary_key": workbook.add_format({"align": "right", "bold": True}),
+                "summary_value": workbook.add_format({"align": "left"}),
             }
 
-            self._write_summary_worksheet("Summary")
-            self._write_files_worksheet("Missing Files", self.comparison.iter_missing())
-            self._write_files_worksheet("Updated Files", self.comparison.iter_updated())
-            self._write_files_worksheet("New Files", self.comparison.iter_new())
-            self._write_moved_files_worksheet("Moved Files")
+            summary_worksheet = self.workbook.add_worksheet("Summary")
+
+            missing_files = self._write_files_worksheet(
+                "Missing Files", self.comparison.iter_missing()
+            )
+            updated_files = self._write_files_worksheet(
+                "Updated Files", self.comparison.iter_updated()
+            )
+            new_files = self._write_files_worksheet(
+                "New Files", self.comparison.iter_new()
+            )
+            moved_groups = self._write_moved_files_worksheet("Moved Files")
+
+            self._write_summary_worksheet(
+                summary_worksheet,
+                missing_files=missing_files,
+                updated_files=updated_files,
+                new_files=new_files,
+                moved_groups=moved_groups,
+            )
 
         self.workbook = self.formats = None
 
-    def _write_summary_worksheet(self, worksheet_name):
-        worksheet = self.workbook.add_worksheet(worksheet_name)
-
-    def _write_files_worksheet(self, worksheet_name, files):
+    def _write_files_worksheet(self, worksheet_name: str, files: t.Iterable[FileDesc]):
         click.secho(
             f"\nCreating worksheet {worksheet_name!r}.", bold=True, fg="bright_cyan"
         )
@@ -70,11 +84,8 @@ class ComparisonReport:
         click.echo(f"{worksheet_name!r} has {len(data)} entries.")
 
         if not data:
-            _logger.warning(
-                f"Skipping worksheet {worksheet_name!r} as data set is empty."
-            )
             worksheet.write_string(0, 0, f"No {worksheet_name!r} found.")
-            return
+            return 0
 
         worksheet.set_column(0, 0, width=COL_WIDTH_PATH)
         worksheet.set_column(1, 1, width=COL_WIDTH_SIZE)
@@ -99,7 +110,9 @@ class ComparisonReport:
             },
         )
 
-    def _write_moved_files_worksheet(self, worksheet_name):
+        return len(data)
+
+    def _write_moved_files_worksheet(self, worksheet_name: str):
         click.secho(
             f"\nCreating worksheet {worksheet_name!r}.", bold=True, fg="bright_cyan"
         )
@@ -120,7 +133,7 @@ class ComparisonReport:
             _logger.warning(
                 f"Skipping worksheet {worksheet_name!r} as data set is empty."
             )
-            return
+            return 0
 
         worksheet = self.workbook.add_worksheet(worksheet_name)
 
@@ -155,3 +168,43 @@ class ComparisonReport:
                 ],
             },
         )
+
+        return len(data)
+
+    def _write_summary_worksheet(
+        self,
+        worksheet,
+        *,
+        missing_files: int,
+        updated_files: int,
+        new_files: int,
+        moved_groups: int,
+    ):
+        click.secho(
+            f"\nCreating worksheet {worksheet.name!r}.", bold=True, fg="bright_cyan"
+        )
+
+        worksheet.write_string(
+            0, 0, "Directory Tree Comparison", cell_format=self.formats["header"]
+        )
+
+        worksheet.set_column(0, 0, width=60)
+        worksheet.set_column(1, 1, width=COL_WIDTH_PATH)
+
+        data = [
+            ["Location 1:", "todo"],
+            ["Location 2:", "todo"],
+            ["", ""],
+            ["Missing files:", missing_files],
+            ["Updated files:", updated_files],
+            ["New files:", new_files],
+            ["Moved files with identical content:", moved_groups],
+        ]
+
+        offset = 2
+        for index, entry in enumerate(data):
+            key, value = entry
+            worksheet.write_string(
+                offset + index, 0, key, cell_format=self.formats["summary_key"]
+            )
+            worksheet.write(offset + index, 1, value, self.formats["summary_value"])

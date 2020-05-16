@@ -7,9 +7,9 @@ import typing as t
 import click
 import xlsxwriter
 
-from findex.db import META_DATE
+from findex.db import META_DATE, META_VERSION
 from findex.fs import FileDesc
-from findex.index import Comparison
+from findex.index import Comparison, META_ROOT_RESOLVED
 
 _logger = logging.getLogger(__name__)
 
@@ -194,9 +194,14 @@ class ComparisonReport:
 
         with contextlib.closing(self.comparison.open()):
             data = [
-                ["Location 1:", "todo"],
-                ["Location 2:", "todo"],
-                ["Created:", self.comparison._get_meta(META_DATE)],
+                ["Created:", self.comparison.get_meta(META_DATE)],
+                ["Version:", self.comparison.get_meta(META_VERSION)],
+                ["", ""],
+                ["Index 1:", self.comparison.get_index_meta(META_ROOT_RESOLVED, "1")],
+                ["Created:", self.comparison.get_index_meta(META_DATE, "1")],
+                ["", ""],
+                ["Index 1:", self.comparison.get_index_meta(META_ROOT_RESOLVED, "2")],
+                ["Created:", self.comparison.get_index_meta(META_DATE, "2")],
                 ["", ""],
                 ["Missing files:", missing_files],
                 ["Updated files:", updated_files],

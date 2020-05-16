@@ -104,12 +104,20 @@ class Storage:
             "INSERT INTO meta (key,value) VALUES (?,?);", (key, value)
         )
 
-    def _get_meta(self, key: str) -> t.Optional[str]:
+    def get_meta(self, key: str) -> t.Optional[str]:
         """Returns value for given key or None if not found."""
         assert self.connection, "database must be open"
         return self.connection.execute(
             "SELECT value FROM meta WHERE key=(?)", (key,)
         ).fetchone()[0]
+
+    def iter_meta(self):
+        try:
+            with opened_storage(self):
+                with contextlib.closing(self.connection.cursor()) as cursor:
+                    yield from cursor.execute("SELECT key,value from meta")
+        except Exception as exc:
+            _logger.warning(f'Cannot read meta data from {self.path}: {exc}')
 
 
 @contextlib.contextmanager

@@ -4,12 +4,16 @@ import contextlib
 import logging
 import pathlib
 import sqlite3
+import typing as t
 
 import click
 import tqdm
 
 from findex.db import Storage, opened_storage
 from findex.fs import FileDesc, FILEHASH_WALK_ERROR, count_files, walk
+
+META_ROOT_SPECIFIED = "ROOT_SPECIFIED"
+META_ROOT_RESOLVED = "ROOT_RESOLVED"
 
 _logger = logging.getLogger(__name__)
 
@@ -40,13 +44,16 @@ class Index(Storage):
         count = count_files(path, _on_error)
 
         with opened_storage(self):
+            self._put_meta(META_ROOT_SPECIFIED, str(path))
+            self._put_meta(META_ROOT_RESOLVED, str(path.resolve()))
+
             _logger.debug(f"Writing {len(errors)} walk errors to database.")
             for errordesc in errors:
                 self._add_file(errordesc)
 
             _logger.info(f"Found {count} files to be added to index.")
             for filedesc in tqdm.tqdm(
-                walk(path), total=count, desc="Read", unit="files"
+                    walk(path), total=count, desc="Read", unit="files"
             ):
                 self._add_file(filedesc)
                 self._on_update()
@@ -70,14 +77,9 @@ class Index(Storage):
         with opened_storage(self):
             with contextlib.closing(self.connection.cursor()) as cursor:
                 for row in cursor.execute(
-                    "SELECT path,size,hash,created,modified from file"
+                        "SELECT path,size,hash,created,modified from file"
                 ):
                     yield FileDesc._make(row)
-
-    @property
-    def iter_duplicates(self):
-        """Return list of duplicate files."""
-        raise NotImplementedError()
 
 
 FilesMap = collections.namedtuple("FilesMap", "fhash size files1 files2")
@@ -96,14 +98,25 @@ class Comparison(Storage):
 
         with opened_storage(self):
             click.echo(f"\nAdding data from {index1.path}.")
-            self._add_index(index1, "file1")
+            self._add_index(index1, "1")
             click.echo(f"\nAdding data from {index2.path}.")
-            self._add_index(index2, "file2")
+            self._add_index(index2, "2")
 
-    def _add_index(self, index: Index, table: str):
+    def _add_index(self, index: Index, table_suffix: str):
         for file in tqdm.tqdm(index.iter_all(), total=index.count(), unit="files"):
-            self._add_file(file, table)
+            self._add_file(file, f"file{table_suffix}")
             self._on_update()
+
+        # copy meta data of index:
+        for key, value in index.iter_meta():
+            self._put_meta(self._index_key(key, table_suffix), value)
+
+    @staticmethod
+    def _index_key(key: str, table_suffix: str) -> str:
+        return f"INDEX{table_suffix}_{key}"
+
+    def get_index_meta(self, key: str, table_suffix: str) -> t.Optional[str]:
+        return self.get_meta(self._index_key(key, table_suffix))
 
     def _add_file(self, filedesc: FileDesc, table: str):
         try:
@@ -117,7 +130,7 @@ class Comparison(Storage):
             raise
 
     def _iter_exclusive_files(
-        self, table_contained, table_not_contained, *, include_updated=False
+            self, table_contained, table_not_contained, *, include_updated=False
     ):
         """Return files only in table_contained, but not in table_not_contained."""
         assert table_contained != table_not_contained
@@ -130,16 +143,16 @@ class Comparison(Storage):
         with opened_storage(self):
             with contextlib.closing(self.connection.cursor()) as cursor:
                 for row in cursor.execute(
-                    f"SELECT "
-                    f"  {table_contained}.path,"
-                    f"  {table_contained}.size,"
-                    f"  {table_contained}.hash,"
-                    f"  {table_contained}.created,"
-                    f"  {table_contained}.modified "
-                    f"FROM {table_contained} LEFT OUTER JOIN {table_not_contained} "
-                    f"  ON {table_contained}.hash = {table_not_contained}.hash "
-                    f"WHERE {table_not_contained}.hash IS NULL "
-                    f"ORDER BY {table_contained}.path"
+                        f"SELECT "
+                        f"  {table_contained}.path,"
+                        f"  {table_contained}.size,"
+                        f"  {table_contained}.hash,"
+                        f"  {table_contained}.created,"
+                        f"  {table_contained}.modified "
+                        f"FROM {table_contained} LEFT OUTER JOIN {table_not_contained} "
+                        f"  ON {table_contained}.hash = {table_not_contained}.hash "
+                        f"WHERE {table_not_contained}.hash IS NULL "
+                        f"ORDER BY {table_contained}.path"
                 ):
                     file = FileDesc._make(row)
 
@@ -163,16 +176,16 @@ class Comparison(Storage):
         with opened_storage(self):
             with contextlib.closing(self.connection.cursor()) as cursor:
                 for row in cursor.execute(
-                    "SELECT "
-                    "  file1.path,"
-                    "  file1.size,"
-                    "  file1.hash,"
-                    "  file1.created,"
-                    "  file1.modified "
-                    "FROM file1 JOIN file2 "
-                    "  ON file1.path = file2.path "
-                    "WHERE file1.hash != file2.hash "
-                    "ORDER BY file1.path"
+                        "SELECT "
+                        "  file1.path,"
+                        "  file1.size,"
+                        "  file1.hash,"
+                        "  file1.created,"
+                        "  file1.modified "
+                        "FROM file1 JOIN file2 "
+                        "  ON file1.path = file2.path "
+                        "WHERE file1.hash != file2.hash "
+                        "ORDER BY file1.path"
                 ):
                     yield FileDesc._make(row)
 
@@ -185,15 +198,15 @@ class Comparison(Storage):
         with opened_storage(self):
             with contextlib.closing(self.connection.cursor()) as cursor:
                 for row in cursor.execute(
-                    "SELECT "
-                    "  file1.hash,"
-                    "  file1.size,"
-                    "  group_concat(DISTINCT file1.path) AS files1,"
-                    "  group_concat(DISTINCT file2.path) AS files2 "
-                    "FROM file1 JOIN file2 "
-                    "  ON file1.hash == file2.hash "
-                    "GROUP BY file1.hash,file1.size "
-                    "ORDER BY files1"
+                        "SELECT "
+                        "  file1.hash,"
+                        "  file1.size,"
+                        "  group_concat(DISTINCT file1.path) AS files1,"
+                        "  group_concat(DISTINCT file2.path) AS files2 "
+                        "FROM file1 JOIN file2 "
+                        "  ON file1.hash == file2.hash "
+                        "GROUP BY file1.hash,file1.size "
+                        "ORDER BY files1"
                 ):
                     fmap = FilesMap._make(row)
 

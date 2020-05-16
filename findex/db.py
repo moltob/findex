@@ -107,9 +107,11 @@ class Storage:
     def get_meta(self, key: str) -> t.Optional[str]:
         """Returns value for given key or None if not found."""
         assert self.connection, "database must be open"
-        return self.connection.execute(
+        values = self.connection.execute(
             "SELECT value FROM meta WHERE key=(?)", (key,)
-        ).fetchone()[0]
+        ).fetchone()
+
+        return values[0] if values else None
 
     def iter_meta(self):
         try:

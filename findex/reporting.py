@@ -200,7 +200,7 @@ class ComparisonReport:
                 ["Index 1:", self.comparison.get_index_meta(META_ROOT_RESOLVED, "1")],
                 ["Created:", self.comparison.get_index_meta(META_DATE, "1")],
                 ["", ""],
-                ["Index 1:", self.comparison.get_index_meta(META_ROOT_RESOLVED, "2")],
+                ["Index 2:", self.comparison.get_index_meta(META_ROOT_RESOLVED, "2")],
                 ["Created:", self.comparison.get_index_meta(META_DATE, "2")],
                 ["", ""],
                 ["Missing files:", missing_files],

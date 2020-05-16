@@ -55,16 +55,18 @@ class ComparisonReport:
         click.secho(
             f"\nCreating worksheet {worksheet_name!r}.", bold=True, fg="bright_cyan"
         )
+
+        worksheet = self.workbook.add_worksheet(worksheet_name)
         data = [(f.path, f.size, f.created, f.modified, f.fhash) for f in files]
+
         click.echo(f"{worksheet_name!r} has {len(data)} entries.")
 
         if not data:
             _logger.warning(
                 f"Skipping worksheet {worksheet_name!r} as data set is empty."
             )
+            worksheet.write_string(0, 0, f"No {worksheet_name!r} found.")
             return
-
-        worksheet = self.workbook.add_worksheet(worksheet_name)
 
         worksheet.set_column(0, 0, width=COL_WIDTH_PATH)
         worksheet.set_column(1, 1, width=COL_WIDTH_SIZE)

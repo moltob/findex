@@ -33,13 +33,21 @@ class ComparisonReport:
 
             # built-in formats:
             self.formats = {
-                "currency": workbook.add_format({"num_format": 0x08}),
-                "date": workbook.add_format({"num_format": 0x0E}),
-                "datetime": workbook.add_format({"num_format": "dd/mm/yyyy hh:mm:ss"}),
-                "hash": workbook.add_format(
-                    {"font_name": "Courier New", "font_size": 10, "align": "center"}
+                "currency": workbook.add_format({"num_format": 0x08, "valign": "top"}),
+                "date": workbook.add_format({"num_format": 0x0E, "valign": "top"}),
+                "datetime": workbook.add_format(
+                    {"num_format": "dd/mm/yyyy hh:mm:ss", "valign": "top"}
                 ),
-                "textlist": workbook.add_format({"text_wrap": True}),
+                "hash": workbook.add_format(
+                    {
+                        "font_name": "Courier New",
+                        "font_size": 10,
+                        "align": "center",
+                        "valign": "top",
+                    }
+                ),
+                "textlist": workbook.add_format({"text_wrap": True, "valign": "top"}),
+                "valign": workbook.add_format({"valign": "top"}),
             }
 
             self._write_summary_worksheet("Summary")
@@ -84,8 +92,8 @@ class ComparisonReport:
                 "style": "Table Style Light 18",
                 "data": data,
                 "columns": [
-                    {"header": "Path"},
-                    {"header": "Size (Bytes)"},
+                    {"header": "Path", "format": self.formats["valign"]},
+                    {"header": "Size (Bytes)", "format": self.formats["valign"]},
                     {"header": "Created", "format": self.formats["datetime"]},
                     {"header": "Modified", "format": self.formats["datetime"]},
                     {"header": "Checksum (SHA1)", "format": self.formats["hash"]},
@@ -134,17 +142,17 @@ class ComparisonReport:
                 "style": "Table Style Light 18",
                 "data": data,
                 "columns": [
-                    {"header": "Duplicates 1"},
+                    {"header": "Duplicates 1", "format": self.formats["valign"]},
                     {
                         "header": "Original Location (Index 1)",
                         "format": self.formats["textlist"],
                     },
-                    {"header": "Duplicates 2"},
+                    {"header": "Duplicates 2", "format": self.formats["valign"]},
                     {
                         "header": "New Location (Index 2)",
                         "format": self.formats["textlist"],
                     },
-                    {"header": "Size (Bytes)"},
+                    {"header": "Size (Bytes)", "format": self.formats["valign"]},
                     {"header": "Checksum (SHA1)", "format": self.formats["hash"]},
                 ],
             },

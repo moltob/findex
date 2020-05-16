@@ -42,14 +42,16 @@ class ComparisonReport:
                 "textlist": workbook.add_format({"text_wrap": True}),
             }
 
+            self._write_summary_worksheet("Summary")
             self._write_files_worksheet("Missing Files", self.comparison.iter_missing())
             self._write_files_worksheet("Updated Files", self.comparison.iter_updated())
             self._write_files_worksheet("New Files", self.comparison.iter_new())
-            self._write_moved_files_worksheet(
-                "Moved Files", self.comparison.iter_content_groups()
-            )
+            self._write_moved_files_worksheet("Moved Files")
 
         self.workbook = self.formats = None
+
+    def _write_summary_worksheet(self, worksheet_name):
+        worksheet = self.workbook.add_worksheet(worksheet_name)
 
     def _write_files_worksheet(self, worksheet_name, files):
         click.secho(
@@ -91,7 +93,7 @@ class ComparisonReport:
             },
         )
 
-    def _write_moved_files_worksheet(self, worksheet_name, content_groups):
+    def _write_moved_files_worksheet(self, worksheet_name):
         click.secho(
             f"\nCreating worksheet {worksheet_name!r}.", bold=True, fg="bright_cyan"
         )
@@ -104,7 +106,7 @@ class ComparisonReport:
                 g.size,
                 g.fhash,
             )
-            for g in content_groups
+            for g in self.comparison.iter_content_groups()
         ]
         click.echo(f"{worksheet_name!r} has {len(data)} entries.")
 

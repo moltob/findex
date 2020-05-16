@@ -188,12 +188,12 @@ class Comparison(Storage):
                     "SELECT "
                     "  file1.hash,"
                     "  file1.size,"
-                    "  group_concat(DISTINCT file1.path),"
-                    "  group_concat(DISTINCT file2.path) "
+                    "  group_concat(DISTINCT file1.path) AS files1,"
+                    "  group_concat(DISTINCT file2.path) AS files2 "
                     "FROM file1 JOIN file2 "
                     "  ON file1.hash == file2.hash "
                     "GROUP BY file1.hash,file1.size "
-                    "ORDER BY file1.size DESC"
+                    "ORDER BY files1"
                 ):
                     fmap = FilesMap._make(row)
 

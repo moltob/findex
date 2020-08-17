@@ -1,1 +1,2 @@
+include findex/doc/*.md
 include findex/schema/*.sql
